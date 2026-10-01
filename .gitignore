@@ -1,0 +1,25 @@
+# Build files
+build/
+*.o
+*.ko
+*.mod
+*.mod.c
+*.order
+*.symvers
+
+# Executables
+voicedesk
+*.out
+
+# Editor files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
