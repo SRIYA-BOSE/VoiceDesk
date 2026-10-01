@@ -4,71 +4,128 @@
 #include "process_manager.hpp"
 #include "system_monitor.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace
 {
-    bool isAllowedApplication(const std::string& application)
+    std::string normalizeApplicationName(
+        const std::string& input)
     {
-        return application == "firefox" ||
-               application == "xterm" ||
-               application == "gedit" ||
-               application == "nautilus";
+        std::string result = input;
+
+        std::transform(
+            result.begin(),
+            result.end(),
+            result.begin(),
+            [](unsigned char c)
+            {
+                return static_cast<char>(
+                    std::tolower(c));
+            });
+
+        return result;
+    }
+
+    bool isAllowedApplication(
+        const std::string& application)
+    {
+        const std::string normalized =
+            normalizeApplicationName(application);
+
+        const std::vector<std::string> allowedApplications =
+        {
+            "firefox",
+            "xterm",
+            "gedit",
+            "nautilus"
+        };
+
+        return std::find(
+            allowedApplications.begin(),
+            allowedApplications.end(),
+            normalized) != allowedApplications.end();
     }
 }
 
-void CommandExecutor::execute(const ParsedCommand& command)
+void CommandExecutor::execute(
+    const ParsedCommand& command)
 {
+    FileManager fileManager;
+    ProcessManager processManager;
+    SystemMonitor systemMonitor;
+
     switch (command.type)
     {
         case CommandType::SYSTEM_INFO:
         {
-            SystemMonitor monitor;
-            monitor.displaySystemInformation();
+            systemMonitor.displaySystemInformation();
             break;
         }
 
         case CommandType::SHOW_PROCESSES:
         {
-            ProcessManager manager;
-            manager.listProcesses();
+            processManager.listProcesses();
             break;
         }
 
         case CommandType::LIST_FILES:
         {
-            FileManager manager;
-            manager.listFiles(".");
+            fileManager.listFiles(".");
             break;
         }
 
         case CommandType::CREATE_FILE:
         {
-            FileManager manager;
-
             if (command.argument.empty())
             {
-                std::cout << "Please specify a file name.\n";
+                std::cout
+                    << "VoiceDesk: Please specify a filename.\n";
                 break;
             }
 
-            manager.createFile(command.argument);
+            if (fileManager.createFile(command.argument))
+            {
+                std::cout
+                    << "VoiceDesk: File created: "
+                    << command.argument
+                    << "\n";
+            }
+            else
+            {
+                std::cout
+                    << "VoiceDesk: Failed to create file.\n";
+            }
+
             break;
         }
 
         case CommandType::DELETE_FILE:
         {
-            FileManager manager;
-
             if (command.argument.empty())
             {
-                std::cout << "Please specify a file name.\n";
+                std::cout
+                    << "VoiceDesk: Please specify a filename.\n";
                 break;
             }
 
-            manager.deleteFile(command.argument);
+            if (fileManager.deleteFile(command.argument))
+            {
+                std::cout
+                    << "VoiceDesk: File deleted: "
+                    << command.argument
+                    << "\n";
+            }
+            else
+            {
+                std::cout
+                    << "VoiceDesk: Failed to delete file.\n";
+            }
+
             break;
         }
 
@@ -76,28 +133,35 @@ void CommandExecutor::execute(const ParsedCommand& command)
         {
             if (command.argument.empty())
             {
-                std::cout << "Please specify an application.\n";
+                std::cout
+                    << "VoiceDesk: Please specify an application.\n";
                 break;
             }
 
             if (!isAllowedApplication(command.argument))
             {
                 std::cout
-                    << "VoiceDesk: Application is not in the allowed list: "
-                    << command.argument << "\n";
+                    << "VoiceDesk: Application is not in "
+                    << "the allowed list: "
+                    << command.argument
+                    << "\n";
 
                 break;
             }
 
+            const std::string application =
+                normalizeApplicationName(command.argument);
+
             std::cout
                 << "VoiceDesk: Opening "
-                << command.argument
+                << application
                 << "...\n";
 
-            std::string commandToRun =
-                command.argument + " >/dev/null 2>&1 &";
+            const std::string launchCommand =
+                application +
+                " >/dev/null 2>&1 &";
 
-            std::system(commandToRun.c_str());
+            std::system(launchCommand.c_str());
 
             break;
         }
@@ -106,59 +170,69 @@ void CommandExecutor::execute(const ParsedCommand& command)
         {
             if (command.argument.empty())
             {
-                std::cout << "Please specify an application.\n";
+                std::cout
+                    << "VoiceDesk: Please specify an application.\n";
                 break;
             }
 
             if (!isAllowedApplication(command.argument))
             {
                 std::cout
-                    << "VoiceDesk: Application is not in the allowed list: "
-                    << command.argument << "\n";
+                    << "VoiceDesk: Application is not in "
+                    << "the allowed list: "
+                    << command.argument
+                    << "\n";
 
                 break;
             }
 
+            const std::string application =
+                normalizeApplicationName(command.argument);
+
             std::cout
                 << "VoiceDesk: Closing "
-                << command.argument
+                << application
                 << "...\n";
 
-            std::string commandToRun =
-                "pkill " + command.argument;
+            const std::string closeCommand =
+                "pkill -x " + application;
 
-            std::system(commandToRun.c_str());
+            std::system(closeCommand.c_str());
 
             break;
         }
 
         case CommandType::HELP:
+        {
             showHelp();
             break;
+        }
 
         case CommandType::UNKNOWN:
+        default:
+        {
             std::cout
                 << "I didn't understand that command.\n"
                 << "Type 'help' to see available commands.\n";
-            break;
 
-        default:
             break;
+        }
     }
 }
 
 void CommandExecutor::showHelp()
 {
     std::cout << "\n";
-    std::cout << "========== VoiceDesk Commands ==========\n";
-    std::cout << "system info       - Show system information\n";
-    std::cout << "list files        - List files\n";
-    std::cout << "show processes    - Show running processes\n";
-    std::cout << "create file NAME  - Create a file\n";
-    std::cout << "delete file NAME  - Delete a file\n";
-    std::cout << "open APP          - Open an application\n";
-    std::cout << "close APP         - Close an application\n";
-    std::cout << "help              - Show this help\n";
-    std::cout << "exit              - Exit VoiceDesk\n";
-    std::cout << "========================================\n\n";
+    std::cout << "Available VoiceDesk commands:\n";
+    std::cout << "  voice\n";
+    std::cout << "  open firefox\n";
+    std::cout << "  close firefox\n";
+    std::cout << "  system information\n";
+    std::cout << "  show processes\n";
+    std::cout << "  list files\n";
+    std::cout << "  create file <name>\n";
+    std::cout << "  delete file <name>\n";
+    std::cout << "  help\n";
+    std::cout << "  exit\n";
+    std::cout << "\n";
 }

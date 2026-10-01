@@ -4,9 +4,58 @@
 #include <cctype>
 #include <sstream>
 
-std::string CommandParser::normalize(const std::string& input) const
+namespace
 {
-    std::string result = input;
+    std::string trim(const std::string& input)
+    {
+        const auto first =
+            input.find_first_not_of(" \t\r\n");
+
+        if (first == std::string::npos)
+        {
+            return "";
+        }
+
+        const auto last =
+            input.find_last_not_of(" \t\r\n");
+
+        return input.substr(first, last - first + 1);
+    }
+
+    std::string removeTrailingPunctuation(
+        const std::string& input)
+    {
+        std::string result = trim(input);
+
+        while (!result.empty())
+        {
+            const char last = result.back();
+
+            if (last == '.' ||
+                last == ',' ||
+                last == '!' ||
+                last == '?' ||
+                last == ';' ||
+                last == ':')
+            {
+                result.pop_back();
+                result = trim(result);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return result;
+    }
+}
+
+std::string CommandParser::normalize(
+    const std::string& input) const
+{
+    std::string result =
+        removeTrailingPunctuation(input);
 
     std::transform(
         result.begin(),
@@ -14,13 +63,15 @@ std::string CommandParser::normalize(const std::string& input) const
         result.begin(),
         [](unsigned char c)
         {
-            return static_cast<char>(std::tolower(c));
+            return static_cast<char>(
+                std::tolower(c));
         });
 
     return result;
 }
 
-ParsedCommand CommandParser::parse(const std::string& input) const
+ParsedCommand CommandParser::parse(
+    const std::string& input) const
 {
     ParsedCommand command;
 
@@ -28,7 +79,8 @@ ParsedCommand CommandParser::parse(const std::string& input) const
     command.argument = "";
     command.original = input;
 
-    const std::string text = normalize(input);
+    const std::string text =
+        normalize(input);
 
     if (text == "exit" ||
         text == "quit" ||
@@ -60,22 +112,34 @@ ParsedCommand CommandParser::parse(const std::string& input) const
     else if (text.rfind("open ", 0) == 0)
     {
         command.type = CommandType::OPEN_APPLICATION;
-        command.argument = input.substr(5);
+
+        command.argument =
+            removeTrailingPunctuation(
+                input.substr(5));
     }
     else if (text.rfind("close ", 0) == 0)
     {
         command.type = CommandType::CLOSE_APPLICATION;
-        command.argument = input.substr(6);
+
+        command.argument =
+            removeTrailingPunctuation(
+                input.substr(6));
     }
     else if (text.rfind("create file ", 0) == 0)
     {
         command.type = CommandType::CREATE_FILE;
-        command.argument = input.substr(12);
+
+        command.argument =
+            removeTrailingPunctuation(
+                input.substr(12));
     }
     else if (text.rfind("delete file ", 0) == 0)
     {
         command.type = CommandType::DELETE_FILE;
-        command.argument = input.substr(12);
+
+        command.argument =
+            removeTrailingPunctuation(
+                input.substr(12));
     }
 
     return command;
