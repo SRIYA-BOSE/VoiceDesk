@@ -27,7 +27,8 @@ SOURCES = \
 	src/file_manager.cpp \
 	src/system_monitor.cpp \
 	src/safety_engine.cpp \
-	src/voice_engine.cpp
+	src/voice_engine.cpp \
+	src/device_driver_client.cpp
 
 OBJECTS = $(SOURCES:src/%.cpp=build/%.o)
 

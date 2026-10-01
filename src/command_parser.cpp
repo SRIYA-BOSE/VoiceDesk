@@ -2,7 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
-#include <sstream>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -49,6 +50,48 @@ namespace
 
         return result;
     }
+
+    bool startsWith(
+        const std::string& text,
+        const std::string& prefix)
+    {
+        return text.rfind(prefix, 0) == 0;
+    }
+
+    std::string removePrefix(
+        const std::string& text,
+        const std::string& prefix)
+    {
+        return trim(text.substr(prefix.length()));
+    }
+
+    std::string extractApplication(
+        const std::string& text)
+    {
+        const std::vector<std::string> prefixes =
+        {
+            "please open ",
+            "please launch ",
+            "please start ",
+            "can you open ",
+            "can you launch ",
+            "can you start ",
+            "open ",
+            "launch ",
+            "start "
+        };
+
+        for (const auto& prefix : prefixes)
+        {
+            if (startsWith(text, prefix))
+            {
+                return removeTrailingPunctuation(
+                    removePrefix(text, prefix));
+            }
+        }
+
+        return "";
+    }
 }
 
 std::string CommandParser::normalize(
@@ -82,64 +125,136 @@ ParsedCommand CommandParser::parse(
     const std::string text =
         normalize(input);
 
+    /*
+     * EXIT COMMANDS
+     */
     if (text == "exit" ||
         text == "quit" ||
-        text == "close assistant")
+        text == "close assistant" ||
+        text == "exit assistant")
     {
         command.type = CommandType::EXIT;
+        return command;
     }
-    else if (text == "help" ||
-             text == "show help")
+
+    /*
+     * HELP COMMANDS
+     */
+    if (text == "help" ||
+        text == "show help" ||
+        text == "what can you do")
     {
         command.type = CommandType::HELP;
+        return command;
     }
-    else if (text == "system information" ||
-             text == "system info" ||
-             text == "show system information")
+
+    /*
+     * SYSTEM INFORMATION
+     */
+    if (text == "system information" ||
+        text == "system info" ||
+        text == "show system information" ||
+        text == "show system info" ||
+        text == "please show system information")
     {
         command.type = CommandType::SYSTEM_INFO;
+        return command;
     }
-    else if (text == "show processes" ||
-             text == "list processes")
+
+    /*
+     * PROCESS COMMANDS
+     */
+    if (text == "show processes" ||
+        text == "list processes" ||
+        text == "show running processes" ||
+        text == "list running processes")
     {
         command.type = CommandType::SHOW_PROCESSES;
+        return command;
     }
-    else if (text == "list files" ||
-             text == "show files")
+
+    /*
+     * FILE LIST COMMANDS
+     */
+    if (text == "list files" ||
+        text == "show files" ||
+        text == "show my files")
     {
         command.type = CommandType::LIST_FILES;
+        return command;
     }
-    else if (text.rfind("open ", 0) == 0)
+
+    /*
+     * APPLICATION OPEN COMMANDS
+     */
+    const std::string application =
+        extractApplication(text);
+
+    if (!application.empty())
     {
-        command.type = CommandType::OPEN_APPLICATION;
+        command.type =
+            CommandType::OPEN_APPLICATION;
+
+        command.argument = application;
+
+        return command;
+    }
+
+    /*
+     * APPLICATION CLOSE COMMANDS
+     */
+    if (startsWith(text, "close "))
+    {
+        command.type =
+            CommandType::CLOSE_APPLICATION;
 
         command.argument =
             removeTrailingPunctuation(
-                input.substr(5));
+                removePrefix(text, "close "));
+
+        return command;
     }
-    else if (text.rfind("close ", 0) == 0)
+
+    if (startsWith(text, "please close "))
     {
-        command.type = CommandType::CLOSE_APPLICATION;
+        command.type =
+            CommandType::CLOSE_APPLICATION;
 
         command.argument =
             removeTrailingPunctuation(
-                input.substr(6));
+                removePrefix(text, "please close "));
+
+        return command;
     }
-    else if (text.rfind("create file ", 0) == 0)
+
+    /*
+     * CREATE FILE
+     */
+    if (startsWith(text, "create file "))
     {
-        command.type = CommandType::CREATE_FILE;
+        command.type =
+            CommandType::CREATE_FILE;
 
         command.argument =
             removeTrailingPunctuation(
-                input.substr(12));
+                removePrefix(text, "create file "));
+
+        return command;
     }
-    else if (text.rfind("delete file ", 0) == 0)
+
+    /*
+     * DELETE FILE
+     */
+    if (startsWith(text, "delete file "))
     {
-        command.type = CommandType::DELETE_FILE;
+        command.type =
+            CommandType::DELETE_FILE;
 
         command.argument =
             removeTrailingPunctuation(
-                input.substr(12));
+                removePrefix(text, "delete file "));
+
+        return command;
     }
 
     return command;

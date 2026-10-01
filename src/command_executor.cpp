@@ -52,9 +52,95 @@ namespace
     }
 }
 
+CommandExecutor::CommandExecutor()
+    : driver_("/dev/voicedesk")
+{
+    if (driver_.isOpen())
+    {
+        std::cout
+            << "VoiceDesk: Linux device driver connected.\n";
+    }
+    else
+    {
+        std::cout
+            << "VoiceDesk: Device driver unavailable.\n"
+            << "VoiceDesk: Continuing in user-space mode.\n";
+    }
+}
+
 void CommandExecutor::execute(
     const ParsedCommand& command)
 {
+    /*
+     * Send the validated command to the Linux
+     * character device before performing the
+     * user-space action.
+     *
+     * The safety check is performed in main.cpp
+     * before reaching this function.
+     */
+    if (driver_.isOpen())
+    {
+        std::string driverCommand;
+
+        switch (command.type)
+        {
+            case CommandType::OPEN_APPLICATION:
+                driverCommand =
+                    "open " + command.argument;
+                break;
+
+            case CommandType::CLOSE_APPLICATION:
+                driverCommand =
+                    "close " + command.argument;
+                break;
+
+            case CommandType::SYSTEM_INFO:
+                driverCommand =
+                    "system information";
+                break;
+
+            case CommandType::SHOW_PROCESSES:
+                driverCommand =
+                    "show processes";
+                break;
+
+            case CommandType::LIST_FILES:
+                driverCommand =
+                    "list files";
+                break;
+
+            case CommandType::CREATE_FILE:
+                driverCommand =
+                    "create file " + command.argument;
+                break;
+
+            case CommandType::DELETE_FILE:
+                driverCommand =
+                    "delete file " + command.argument;
+                break;
+
+            case CommandType::HELP:
+                driverCommand =
+                    "help";
+                break;
+
+            default:
+                break;
+        }
+
+        if (!driverCommand.empty())
+        {
+            if (!driver_.sendCommand(driverCommand))
+            {
+                std::cout
+                    << "VoiceDesk: Warning - "
+                    << "command could not be sent to "
+                    << "the device driver.\n";
+            }
+        }
+    }
+
     FileManager fileManager;
     ProcessManager processManager;
     SystemMonitor systemMonitor;
