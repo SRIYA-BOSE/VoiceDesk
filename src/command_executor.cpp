@@ -4,7 +4,20 @@
 #include "process_manager.hpp"
 #include "system_monitor.hpp"
 
+#include <cstdlib>
 #include <iostream>
+#include <string>
+
+namespace
+{
+    bool isAllowedApplication(const std::string& application)
+    {
+        return application == "firefox" ||
+               application == "xterm" ||
+               application == "gedit" ||
+               application == "nautilus";
+    }
+}
 
 void CommandExecutor::execute(const ParsedCommand& command)
 {
@@ -56,6 +69,66 @@ void CommandExecutor::execute(const ParsedCommand& command)
             }
 
             manager.deleteFile(command.argument);
+            break;
+        }
+
+        case CommandType::OPEN_APPLICATION:
+        {
+            if (command.argument.empty())
+            {
+                std::cout << "Please specify an application.\n";
+                break;
+            }
+
+            if (!isAllowedApplication(command.argument))
+            {
+                std::cout
+                    << "VoiceDesk: Application is not in the allowed list: "
+                    << command.argument << "\n";
+
+                break;
+            }
+
+            std::cout
+                << "VoiceDesk: Opening "
+                << command.argument
+                << "...\n";
+
+            std::string commandToRun =
+                command.argument + " >/dev/null 2>&1 &";
+
+            std::system(commandToRun.c_str());
+
+            break;
+        }
+
+        case CommandType::CLOSE_APPLICATION:
+        {
+            if (command.argument.empty())
+            {
+                std::cout << "Please specify an application.\n";
+                break;
+            }
+
+            if (!isAllowedApplication(command.argument))
+            {
+                std::cout
+                    << "VoiceDesk: Application is not in the allowed list: "
+                    << command.argument << "\n";
+
+                break;
+            }
+
+            std::cout
+                << "VoiceDesk: Closing "
+                << command.argument
+                << "...\n";
+
+            std::string commandToRun =
+                "pkill " + command.argument;
+
+            std::system(commandToRun.c_str());
+
             break;
         }
 
