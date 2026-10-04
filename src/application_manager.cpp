@@ -31,11 +31,7 @@ std::string ApplicationManager::normalize(
         }
     }
 
-    /*
-     * Remove repeated spaces.
-     */
     std::string cleaned;
-
     bool previousSpace = false;
 
     for (char c : result)
@@ -56,9 +52,6 @@ std::string ApplicationManager::normalize(
         }
     }
 
-    /*
-     * Remove leading/trailing spaces.
-     */
     while (
         !cleaned.empty() &&
         cleaned.front() == ' '
@@ -282,6 +275,11 @@ bool ApplicationManager::isAvailable(
     const std::string target =
         normalize(application);
 
+    if (target.empty())
+    {
+        return false;
+    }
+
     for (const auto& app :
          applications_)
     {
@@ -322,14 +320,17 @@ bool ApplicationManager::launch(
     const std::string target =
         normalize(application);
 
+    if (target.empty())
+    {
+        return false;
+    }
+
     /*
-     * Common aliases.
+     * Explicit aliases.
      */
     if (target == "firefox")
     {
-        return launchCommand(
-            "firefox"
-        );
+        return launchCommand("firefox");
     }
 
     if (
@@ -338,9 +339,7 @@ bool ApplicationManager::launch(
         target == "visual studio code"
     )
     {
-        return launchCommand(
-            "code"
-        );
+        return launchCommand("code");
     }
 
     if (
@@ -348,9 +347,7 @@ bool ApplicationManager::launch(
         target == "command terminal"
     )
     {
-        return launchCommand(
-            "x-terminal-emulator"
-        );
+        return launchCommand("x-terminal-emulator");
     }
 
     if (
@@ -378,13 +375,11 @@ bool ApplicationManager::launch(
         target == "vlc media player"
     )
     {
-        return launchCommand(
-            "vlc"
-        );
+        return launchCommand("vlc");
     }
 
     /*
-     * Search discovered applications.
+     * Exact application-name matching.
      */
     for (const auto& app :
          applications_)
@@ -406,12 +401,25 @@ bool ApplicationManager::launch(
     }
 
     /*
-     * Partial application-name matching.
+     * Reject extremely short fuzzy targets.
      *
-     * Example:
-     * "open visual code"
-     * may match
-     * "Visual Studio Code".
+     * This prevents inputs such as "it", "a",
+     * or "go" from accidentally matching an
+     * unrelated application name.
+     */
+    if (target.length() < 3)
+    {
+        std::cout
+            << "[ApplicationManager] "
+               "Application target is too ambiguous: "
+            << application
+            << '\n';
+
+        return false;
+    }
+
+    /*
+     * Controlled partial matching.
      */
     for (const auto& app :
          applications_)
@@ -446,6 +454,11 @@ bool ApplicationManager::close(
     const std::string target =
         normalize(application);
 
+    if (target.empty())
+    {
+        return false;
+    }
+
     std::string process;
 
     if (target == "firefox")
@@ -467,19 +480,12 @@ bool ApplicationManager::close(
     {
         process = "vlc";
     }
-    else if (
-        target == "terminal"
-    )
+    else if (target == "terminal")
     {
-        process =
-            "x-terminal-emulator";
+        process = "x-terminal-emulator";
     }
     else
     {
-        /*
-         * Find the application from
-         * the discovered desktop files.
-         */
         for (const auto& app :
              applications_)
         {
@@ -514,6 +520,12 @@ bool ApplicationManager::close(
                 break;
             }
         }
+
+        /*
+         * Do not use fuzzy matching for closing
+         * applications. Closing the wrong process
+         * is more dangerous than failing to find one.
+         */
     }
 
     if (process.empty())
