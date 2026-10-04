@@ -177,18 +177,27 @@ ParsedCommand CommandParser::parse(
 
     const std::vector<std::string> prefixes =
     {
+        "hello voice desk ",
+        "hi voice desk ",
+        "hey voice desk ",
+        "would you please ",
+        "can you please ",
+        "could you please ",
+        "i would like you to ",
+        "i would like to ",
+        "i want you to ",
+        "i want to ",
         "please ",
+        "hello ",
+        "hi ",
+        "hey ",
         "can you ",
         "could you ",
         "would you ",
         "will you ",
-        "i want you to ",
-        "i want to ",
-        "i would like you to ",
-        "i would like to ",
-        "would you please ",
-        "can you please ",
-        "could you please "
+        "i will ",
+        "ill ",
+        "i'll "
     };
 
     bool removedPrefix = true;
