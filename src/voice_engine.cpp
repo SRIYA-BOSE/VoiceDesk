@@ -2,49 +2,13 @@
 
 #include "whisper.h"
 
-#include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
-
-namespace
-{
-    struct WavHeader
-    {
-        char riff[4];
-        uint32_t fileSize;
-        char wave[4];
-
-        char fmt[4];
-        uint32_t fmtSize;
-        uint16_t audioFormat;
-        uint16_t channels;
-        uint32_t sampleRate;
-        uint32_t byteRate;
-        uint16_t blockAlign;
-        uint16_t bitsPerSample;
-
-        char data[4];
-        uint32_t dataSize;
-    };
-
-    std::string trim(const std::string& value)
-    {
-        const auto first = value.find_first_not_of(" \t\n\r");
-
-        if (first == std::string::npos)
-        {
-            return "";
-        }
-
-        const auto last = value.find_last_not_of(" \t\n\r");
-
-        return value.substr(first, last - first + 1);
-    }
-}
 
 VoiceEngine::VoiceEngine(const std::string& modelPath)
     : modelPath(modelPath),
@@ -63,20 +27,16 @@ VoiceEngine::~VoiceEngine()
 
 bool VoiceEngine::initialize()
 {
-    whisper_context_params params =
-        whisper_context_default_params();
+    std::cout
+        << "VoiceEngine: Loading Whisper model...\n";
 
     context =
-        whisper_init_from_file_with_params(
-            modelPath.c_str(),
-            params);
+        whisper_init_from_file(modelPath.c_str());
 
     if (context == nullptr)
     {
         std::cerr
-            << "VoiceEngine: Failed to load Whisper model: "
-            << modelPath
-            << '\n';
+            << "VoiceEngine: Failed to load Whisper model.\n";
 
         return false;
     }
@@ -87,27 +47,83 @@ bool VoiceEngine::initialize()
     return true;
 }
 
-bool VoiceEngine::recordAudio(const std::string& filename) const
+bool VoiceEngine::recordAudio(
+    const std::string& filename
+) const
 {
-    std::cout << "\nListening for 5 seconds...\n";
-    std::cout << "Speak a VoiceDesk command now.\n";
+    std::cout
+        << "\nListening for 5 seconds...\n"
+        << "Speak a VoiceDesk command now.\n";
 
-    std::string command =
-        "timeout 5s parecord "
+    std::remove(filename.c_str());
+
+    const std::string recordCommand =
+        "timeout --signal=INT --kill-after=1s 8s "
+        "parecord "
         "--device=RDPSource "
         "--format=s16le "
         "--rate=16000 "
         "--channels=1 "
         "--file-format=wav "
-        "\"" + filename + "\"";
+        "\"" + filename + "\" "
+        "|| test -s \"" + filename + "\"";
 
-    const int result = std::system(command.c_str());
+    const int recordResult =
+        std::system(recordCommand.c_str());
 
-    // timeout normally returns 124 after stopping parecord.
-    if (result != 0 && result != 31744)
+    std::ifstream audioFile(filename);
+
+    if (recordResult != 0 || !audioFile.good())
     {
         std::cerr
             << "VoiceEngine: Microphone recording failed.\n";
+
+        audioFile.close();
+        std::remove(filename.c_str());
+
+        return false;
+    }
+
+    audioFile.close();
+
+    const std::string convertedFile =
+        filename + ".converted.wav";
+
+    std::remove(convertedFile.c_str());
+
+    const std::string convertCommand =
+        "ffmpeg -y -loglevel error "
+        "-i \"" + filename + "\" "
+        "-ar 16000 "
+        "-ac 1 "
+        "-c:a pcm_s16le "
+        "\"" + convertedFile + "\"";
+
+    const int convertResult =
+        std::system(convertCommand.c_str());
+
+    if (convertResult != 0)
+    {
+        std::cerr
+            << "VoiceEngine: Audio conversion failed.\n";
+
+        std::remove(filename.c_str());
+        std::remove(convertedFile.c_str());
+
+        return false;
+    }
+
+    std::remove(filename.c_str());
+
+    if (std::rename(
+            convertedFile.c_str(),
+            filename.c_str()) != 0)
+    {
+        std::cerr
+            << "VoiceEngine: Could not replace "
+            << "the audio file.\n";
+
+        std::remove(convertedFile.c_str());
 
         return false;
     }
@@ -116,86 +132,265 @@ bool VoiceEngine::recordAudio(const std::string& filename) const
 }
 
 std::string VoiceEngine::transcribe(
-    const std::string& filename)
+    const std::string& filename
+)
 {
-    std::ifstream file(filename, std::ios::binary);
+    std::cout
+        << "VoiceEngine: Transcribing...\n";
+
+    std::ifstream file(
+        filename,
+        std::ios::binary
+    );
 
     if (!file)
     {
         std::cerr
-            << "VoiceEngine: Unable to open recorded audio.\n";
+            << "VoiceEngine: Could not open audio file.\n";
 
         return "";
     }
 
-    WavHeader header{};
+    /*
+     * Verify RIFF/WAV header.
+     */
+    char riff[4];
 
     file.read(
-        reinterpret_cast<char*>(&header),
-        sizeof(header));
+        riff,
+        4
+    );
 
-    if (!file)
+    if (file.gcount() != 4 ||
+        riff[0] != 'R' ||
+        riff[1] != 'I' ||
+        riff[2] != 'F' ||
+        riff[3] != 'F')
     {
         std::cerr
             << "VoiceEngine: Invalid WAV file.\n";
 
-        return "";
-    }
-
-    if (header.audioFormat != 1 ||
-        header.channels != 1 ||
-        header.sampleRate != 16000 ||
-        header.bitsPerSample != 16)
-    {
-        std::cerr
-            << "VoiceEngine: Unsupported audio format.\n";
+        file.close();
 
         return "";
     }
 
-    std::vector<int16_t> pcm16(
-        header.dataSize / sizeof(int16_t));
+    /*
+     * Read number of channels.
+     */
+    file.seekg(
+        22,
+        std::ios::beg
+    );
+
+    std::uint16_t channels = 0;
 
     file.read(
-        reinterpret_cast<char*>(pcm16.data()),
-        header.dataSize);
+        reinterpret_cast<char*>(&channels),
+        sizeof(channels)
+    );
 
-    if (!file)
+    /*
+     * Read sample rate.
+     */
+    file.seekg(
+        24,
+        std::ios::beg
+    );
+
+    std::uint32_t sampleRate = 0;
+
+    file.read(
+        reinterpret_cast<char*>(&sampleRate),
+        sizeof(sampleRate)
+    );
+
+    /*
+     * Read bits per sample.
+     */
+    file.seekg(
+        34,
+        std::ios::beg
+    );
+
+    std::uint16_t bitsPerSample = 0;
+
+    file.read(
+        reinterpret_cast<char*>(&bitsPerSample),
+        sizeof(bitsPerSample)
+    );
+
+    if (channels != 1 ||
+        sampleRate != 16000 ||
+        bitsPerSample != 16)
     {
         std::cerr
-            << "VoiceEngine: Failed reading audio samples.\n";
+            << "VoiceEngine: WAV format is not "
+            << "16-bit mono 16 kHz.\n";
+
+        std::cerr
+            << "Channels: "
+            << channels
+            << ", Rate: "
+            << sampleRate
+            << ", Bits: "
+            << bitsPerSample
+            << "\n";
+
+        file.close();
 
         return "";
     }
 
-    std::vector<float> pcmf32(pcm16.size());
+    /*
+     * Search for the WAV data chunk.
+     */
+    file.seekg(
+        12,
+        std::ios::beg
+    );
 
-    std::transform(
-        pcm16.begin(),
-        pcm16.end(),
-        pcmf32.begin(),
-        [](int16_t sample)
+    char chunkId[4];
+
+    std::uint32_t chunkSize = 0;
+
+    bool foundData = false;
+
+    std::uint32_t dataSize = 0;
+
+    while (file.good())
+    {
+        file.read(
+            chunkId,
+            4
+        );
+
+        if (file.gcount() != 4)
         {
-            return static_cast<float>(sample) / 32768.0f;
-        });
+            break;
+        }
 
+        file.read(
+            reinterpret_cast<char*>(&chunkSize),
+            sizeof(chunkSize)
+        );
+
+        if (file.gcount() != 4)
+        {
+            break;
+        }
+
+        if (chunkId[0] == 'd' &&
+            chunkId[1] == 'a' &&
+            chunkId[2] == 't' &&
+            chunkId[3] == 'a')
+        {
+            dataSize = chunkSize;
+            foundData = true;
+
+            break;
+        }
+
+        /*
+         * Skip unknown WAV chunk.
+         */
+        file.seekg(
+            chunkSize,
+            std::ios::cur
+        );
+    }
+
+    if (!foundData ||
+        dataSize == 0)
+    {
+        std::cerr
+            << "VoiceEngine: WAV data chunk not found.\n";
+
+        file.close();
+
+        return "";
+    }
+
+    /*
+     * Convert 16-bit PCM samples to float.
+     */
+    const std::size_t sampleCount =
+        dataSize / sizeof(std::int16_t);
+
+    std::vector<std::int16_t> samples(
+        sampleCount
+    );
+
+    file.read(
+        reinterpret_cast<char*>(
+            samples.data()
+        ),
+        static_cast<std::streamsize>(
+            dataSize
+        )
+    );
+
+    file.close();
+
+    if (samples.empty())
+    {
+        std::cerr
+            << "VoiceEngine: No audio samples found.\n";
+
+        return "";
+    }
+
+    std::vector<float> pcmf32(
+        sampleCount
+    );
+
+    for (std::size_t i = 0;
+         i < sampleCount;
+         ++i)
+    {
+        pcmf32[i] =
+            static_cast<float>(
+                samples[i]
+            ) / 32768.0f;
+    }
+
+    /*
+     * Whisper configuration.
+     */
     whisper_full_params params =
         whisper_full_default_params(
-            WHISPER_SAMPLING_GREEDY);
+            WHISPER_SAMPLING_GREEDY
+        );
 
     params.print_progress = false;
+    params.print_special = false;
     params.print_realtime = false;
     params.print_timestamps = false;
-    params.print_special = false;
 
-    params.language = "en";
     params.translate = false;
+    params.language = "en";
 
-    if (whisper_full(
+    params.n_threads = 4;
+
+    params.no_context = true;
+    params.single_segment = false;
+
+    params.temperature = 0.0f;
+
+    /*
+     * Run Whisper.
+     */
+    const int result =
+        whisper_full(
             context,
             params,
             pcmf32.data(),
-            static_cast<int>(pcmf32.size())) != 0)
+            static_cast<int>(
+                pcmf32.size()
+            )
+        );
+
+    if (result != 0)
     {
         std::cerr
             << "VoiceEngine: Whisper transcription failed.\n";
@@ -203,23 +398,54 @@ std::string VoiceEngine::transcribe(
         return "";
     }
 
+    /*
+     * Collect Whisper segments.
+     */
     std::string text;
 
     const int segmentCount =
-        whisper_full_n_segments(context);
+        whisper_full_n_segments(
+            context
+        );
 
-    for (int i = 0; i < segmentCount; ++i)
+    for (int i = 0;
+         i < segmentCount;
+         ++i)
     {
-        const char* segment =
-            whisper_full_get_segment_text(context, i);
+        const char* segmentText =
+            whisper_full_get_segment_text(
+                context,
+                i
+            );
 
-        if (segment != nullptr)
+        if (segmentText != nullptr)
         {
-            text += segment;
+            text += segmentText;
         }
     }
 
-    return trim(text);
+    /*
+     * Trim whitespace.
+     */
+    const std::size_t first =
+        text.find_first_not_of(
+            " \t\n\r"
+        );
+
+    const std::size_t last =
+        text.find_last_not_of(
+            " \t\n\r"
+        );
+
+    if (first == std::string::npos)
+    {
+        return "";
+    }
+
+    return text.substr(
+        first,
+        last - first + 1
+    );
 }
 
 std::string VoiceEngine::listen()
@@ -232,12 +458,12 @@ std::string VoiceEngine::listen()
         return "";
     }
 
-    std::cout << "VoiceEngine: Processing speech...\n";
-
-    std::string result =
+    const std::string result =
         transcribe(filename);
 
-    std::remove(filename.c_str());
+    std::remove(
+        filename.c_str()
+    );
 
     return result;
 }

@@ -4,286 +4,233 @@
 #include "process_manager.hpp"
 #include "system_monitor.hpp"
 
-#include <algorithm>
-#include <cctype>
-#include <cstdlib>
 #include <iostream>
-#include <string>
-#include <vector>
-
-namespace
-{
-    std::string normalizeApplicationName(
-        const std::string& input)
-    {
-        std::string result = input;
-
-        std::transform(
-            result.begin(),
-            result.end(),
-            result.begin(),
-            [](unsigned char c)
-            {
-                return static_cast<char>(
-                    std::tolower(c));
-            });
-
-        return result;
-    }
-
-    bool isAllowedApplication(
-        const std::string& application)
-    {
-        const std::string normalized =
-            normalizeApplicationName(application);
-
-        const std::vector<std::string> allowedApplications =
-        {
-            "firefox",
-            "xterm",
-            "gedit",
-            "nautilus"
-        };
-
-        return std::find(
-            allowedApplications.begin(),
-            allowedApplications.end(),
-            normalized) != allowedApplications.end();
-    }
-}
 
 CommandExecutor::CommandExecutor()
-    : driver_("/dev/voicedesk")
+    : application_manager_(),
+      browser_manager_(),
+      driver_("/dev/voicedesk")
 {
-    if (driver_.isOpen())
-    {
-        std::cout
-            << "VoiceDesk: Linux device driver connected.\n";
-    }
-    else
-    {
-        std::cout
-            << "VoiceDesk: Device driver unavailable.\n"
-            << "VoiceDesk: Continuing in user-space mode.\n";
-    }
 }
 
 void CommandExecutor::execute(
-    const ParsedCommand& command)
+    const ParsedCommand& command
+)
 {
-    /*
-     * Send the validated command to the Linux
-     * character device before performing the
-     * user-space action.
-     *
-     * The safety check is performed in main.cpp
-     * before reaching this function.
-     */
-    if (driver_.isOpen())
-    {
-        std::string driverCommand;
-
-        switch (command.type)
-        {
-            case CommandType::OPEN_APPLICATION:
-                driverCommand =
-                    "open " + command.argument;
-                break;
-
-            case CommandType::CLOSE_APPLICATION:
-                driverCommand =
-                    "close " + command.argument;
-                break;
-
-            case CommandType::SYSTEM_INFO:
-                driverCommand =
-                    "system information";
-                break;
-
-            case CommandType::SHOW_PROCESSES:
-                driverCommand =
-                    "show processes";
-                break;
-
-            case CommandType::LIST_FILES:
-                driverCommand =
-                    "list files";
-                break;
-
-            case CommandType::CREATE_FILE:
-                driverCommand =
-                    "create file " + command.argument;
-                break;
-
-            case CommandType::DELETE_FILE:
-                driverCommand =
-                    "delete file " + command.argument;
-                break;
-
-            case CommandType::HELP:
-                driverCommand =
-                    "help";
-                break;
-
-            default:
-                break;
-        }
-
-        if (!driverCommand.empty())
-        {
-            if (!driver_.sendCommand(driverCommand))
-            {
-                std::cout
-                    << "VoiceDesk: Warning - "
-                    << "command could not be sent to "
-                    << "the device driver.\n";
-            }
-        }
-    }
-
-    FileManager fileManager;
-    ProcessManager processManager;
-    SystemMonitor systemMonitor;
-
     switch (command.type)
     {
-        case CommandType::SYSTEM_INFO:
-        {
-            systemMonitor.displaySystemInformation();
-            break;
-        }
-
-        case CommandType::SHOW_PROCESSES:
-        {
-            processManager.listProcesses();
-            break;
-        }
-
-        case CommandType::LIST_FILES:
-        {
-            fileManager.listFiles(".");
-            break;
-        }
-
-        case CommandType::CREATE_FILE:
-        {
-            if (command.argument.empty())
-            {
-                std::cout
-                    << "VoiceDesk: Please specify a filename.\n";
-                break;
-            }
-
-            if (fileManager.createFile(command.argument))
-            {
-                std::cout
-                    << "VoiceDesk: File created: "
-                    << command.argument
-                    << "\n";
-            }
-            else
-            {
-                std::cout
-                    << "VoiceDesk: Failed to create file.\n";
-            }
-
-            break;
-        }
-
-        case CommandType::DELETE_FILE:
-        {
-            if (command.argument.empty())
-            {
-                std::cout
-                    << "VoiceDesk: Please specify a filename.\n";
-                break;
-            }
-
-            if (fileManager.deleteFile(command.argument))
-            {
-                std::cout
-                    << "VoiceDesk: File deleted: "
-                    << command.argument
-                    << "\n";
-            }
-            else
-            {
-                std::cout
-                    << "VoiceDesk: Failed to delete file.\n";
-            }
-
-            break;
-        }
-
         case CommandType::OPEN_APPLICATION:
         {
-            if (command.argument.empty())
+            if (driver_.isOpen())
             {
-                std::cout
-                    << "VoiceDesk: Please specify an application.\n";
-                break;
+                driver_.sendCommand(
+                    "open " + command.argument
+                );
             }
 
-            if (!isAllowedApplication(command.argument))
+            if (
+                application_manager_.launch(
+                    command.argument
+                )
+            )
             {
                 std::cout
-                    << "VoiceDesk: Application is not in "
-                    << "the allowed list: "
+                    << "[VoiceDesk] Opened: "
                     << command.argument
-                    << "\n";
-
-                break;
+                    << '\n';
+            }
+            else
+            {
+                std::cout
+                    << "[VoiceDesk] Application not found: "
+                    << command.argument
+                    << '\n';
             }
 
-            const std::string application =
-                normalizeApplicationName(command.argument);
+            break;
+        }
 
-            std::cout
-                << "VoiceDesk: Opening "
-                << application
-                << "...\n";
+        case CommandType::OPEN_URL:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "open url " +
+                    command.argument
+                );
+            }
 
-            const std::string launchCommand =
-                application +
-                " >/dev/null 2>&1 &";
+            if (
+                browser_manager_.open(
+                    command.argument
+                )
+            )
+            {
+                std::cout
+                    << "[VoiceDesk] Opened URL: "
+                    << command.argument
+                    << '\n';
+            }
+            else
+            {
+                std::cout
+                    << "[VoiceDesk] Unable to open URL\n";
+            }
 
-            std::system(launchCommand.c_str());
+            break;
+        }
+
+        case CommandType::SEARCH_WEB:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "search " +
+                    command.argument
+                );
+            }
+
+            if (
+                browser_manager_.searchGoogle(
+                    command.argument
+                )
+            )
+            {
+                std::cout
+                    << "[VoiceDesk] Searching Google for: "
+                    << command.argument
+                    << '\n';
+            }
+            else
+            {
+                std::cout
+                    << "[VoiceDesk] Search failed\n";
+            }
 
             break;
         }
 
         case CommandType::CLOSE_APPLICATION:
         {
-            if (command.argument.empty())
+            if (driver_.isOpen())
             {
-                std::cout
-                    << "VoiceDesk: Please specify an application.\n";
-                break;
+                driver_.sendCommand(
+                    "close " +
+                    command.argument
+                );
             }
 
-            if (!isAllowedApplication(command.argument))
+            if (
+                application_manager_.close(
+                    command.argument
+                )
+            )
             {
                 std::cout
-                    << "VoiceDesk: Application is not in "
-                    << "the allowed list: "
+                    << "[VoiceDesk] Closed: "
                     << command.argument
-                    << "\n";
-
-                break;
+                    << '\n';
+            }
+            else
+            {
+                std::cout
+                    << "[VoiceDesk] Could not close: "
+                    << command.argument
+                    << '\n';
             }
 
-            const std::string application =
-                normalizeApplicationName(command.argument);
+            break;
+        }
+
+        case CommandType::SYSTEM_INFO:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "system information"
+                );
+            }
+
+            /*
+             * Use the existing SystemMonitor API.
+             *
+             * Your current class does not have
+             * showSystemInfo(), so use the
+             * existing display method.
+             */
+            SystemMonitor monitor;
+            monitor.displaySystemInformation();
+
+            break;
+        }
+
+        case CommandType::SHOW_PROCESSES:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "show processes"
+                );
+            }
+
+            ProcessManager manager;
+            manager.listProcesses();
+
+            break;
+        }
+
+        case CommandType::LIST_FILES:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "list files"
+                );
+            }
+
+            FileManager manager;
+
+            /*
+             * Your existing FileManager requires
+             * a path argument.
+             *
+             * "." means current directory.
+             */
+            manager.listFiles(".");
+
+            break;
+        }
+
+        case CommandType::DISK_INFO:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "disk information"
+                );
+            }
 
             std::cout
-                << "VoiceDesk: Closing "
-                << application
-                << "...\n";
+                << "[VoiceDesk] Disk information:\n";
 
-            const std::string closeCommand =
-                "pkill -x " + application;
+            std::system("df -h");
 
-            std::system(closeCommand.c_str());
+            break;
+        }
+
+        case CommandType::NETWORK_INFO:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "network information"
+                );
+            }
+
+            std::cout
+                << "[VoiceDesk] Network information:\n";
+
+            std::system("ip addr");
 
             break;
         }
@@ -294,12 +241,25 @@ void CommandExecutor::execute(
             break;
         }
 
-        case CommandType::UNKNOWN:
+        case CommandType::EXIT:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand("exit");
+            }
+
+            std::cout
+                << "[VoiceDesk] Exiting...\n";
+
+            break;
+        }
+
         default:
         {
             std::cout
-                << "I didn't understand that command.\n"
-                << "Type 'help' to see available commands.\n";
+                << "[VoiceDesk] Unknown command: "
+                << command.argument
+                << '\n';
 
             break;
         }
@@ -308,17 +268,56 @@ void CommandExecutor::execute(
 
 void CommandExecutor::showHelp()
 {
-    std::cout << "\n";
-    std::cout << "Available VoiceDesk commands:\n";
-    std::cout << "  voice\n";
-    std::cout << "  open firefox\n";
-    std::cout << "  close firefox\n";
-    std::cout << "  system information\n";
-    std::cout << "  show processes\n";
-    std::cout << "  list files\n";
-    std::cout << "  create file <name>\n";
-    std::cout << "  delete file <name>\n";
-    std::cout << "  help\n";
-    std::cout << "  exit\n";
-    std::cout << "\n";
+    std::cout << R"(
+================ VoiceDesk Commands ================
+
+APPLICATIONS
+
+  open firefox
+  open vscode
+  open terminal
+  open vlc
+  open file manager
+  close firefox
+
+WEB
+
+  open youtube
+  open whatsapp
+  open gmail
+  open github
+  open google
+  open linkedin
+  open reddit
+  open chatgpt
+
+URL
+
+  open https://example.com
+
+SEARCH
+
+  search google for Linux device drivers
+  search for C++ tutorials
+
+SYSTEM
+
+  show system information
+  show processes
+  list files
+  show disk space
+  show network information
+
+FILES
+
+  create file test.txt
+  delete file test.txt
+
+ASSISTANT
+
+  help
+  exit
+
+=====================================================
+)";
 }

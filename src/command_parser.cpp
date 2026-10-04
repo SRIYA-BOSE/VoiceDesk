@@ -2,260 +2,717 @@
 
 #include <algorithm>
 #include <cctype>
+#include <sstream>
 #include <string>
 #include <vector>
 
 namespace
 {
-    std::string trim(const std::string& input)
+std::string trim(const std::string& value)
+{
+    const auto first =
+        value.find_first_not_of(" \t\n\r");
+
+    if (first == std::string::npos)
     {
-        const auto first =
-            input.find_first_not_of(" \t\r\n");
-
-        if (first == std::string::npos)
-        {
-            return "";
-        }
-
-        const auto last =
-            input.find_last_not_of(" \t\r\n");
-
-        return input.substr(first, last - first + 1);
-    }
-
-    std::string removeTrailingPunctuation(
-        const std::string& input)
-    {
-        std::string result = trim(input);
-
-        while (!result.empty())
-        {
-            const char last = result.back();
-
-            if (last == '.' ||
-                last == ',' ||
-                last == '!' ||
-                last == '?' ||
-                last == ';' ||
-                last == ':')
-            {
-                result.pop_back();
-                result = trim(result);
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return result;
-    }
-
-    bool startsWith(
-        const std::string& text,
-        const std::string& prefix)
-    {
-        return text.rfind(prefix, 0) == 0;
-    }
-
-    std::string removePrefix(
-        const std::string& text,
-        const std::string& prefix)
-    {
-        return trim(text.substr(prefix.length()));
-    }
-
-    std::string extractApplication(
-        const std::string& text)
-    {
-        const std::vector<std::string> prefixes =
-        {
-            "please open ",
-            "please launch ",
-            "please start ",
-            "can you open ",
-            "can you launch ",
-            "can you start ",
-            "open ",
-            "launch ",
-            "start "
-        };
-
-        for (const auto& prefix : prefixes)
-        {
-            if (startsWith(text, prefix))
-            {
-                return removeTrailingPunctuation(
-                    removePrefix(text, prefix));
-            }
-        }
-
         return "";
     }
+
+    const auto last =
+        value.find_last_not_of(" \t\n\r");
+
+    return value.substr(
+        first,
+        last - first + 1
+    );
+}
+
+bool contains(
+    const std::string& text,
+    const std::string& phrase
+)
+{
+    return text.find(phrase) != std::string::npos;
+}
+
+void replaceAll(
+    std::string& text,
+    const std::string& from,
+    const std::string& to
+)
+{
+    if (from.empty())
+    {
+        return;
+    }
+
+    std::size_t pos = 0;
+
+    while (
+        (pos = text.find(from, pos))
+        != std::string::npos
+    )
+    {
+        text.replace(
+            pos,
+            from.length(),
+            to
+        );
+
+        pos += to.length();
+    }
+}
 }
 
 std::string CommandParser::normalize(
-    const std::string& input) const
+    const std::string& input
+) const
 {
-    std::string result =
-        removeTrailingPunctuation(input);
+    std::string result;
 
-    std::transform(
-        result.begin(),
-        result.end(),
-        result.begin(),
-        [](unsigned char c)
+    for (unsigned char c : input)
+    {
+        result += static_cast<char>(
+            std::tolower(c)
+        );
+    }
+
+    // Whisper punctuation cleanup.
+    for (char& c : result)
+    {
+        if (
+            c == '.' ||
+            c == ',' ||
+            c == '!' ||
+            c == '?' ||
+            c == ':' ||
+            c == ';'
+        )
         {
-            return static_cast<char>(
-                std::tolower(c));
-        });
+            c = ' ';
+        }
+    }
 
-    return result;
+    // Common Whisper recognition variations.
+    replaceAll(result, "you tube", "youtube");
+    replaceAll(result, "you-tube", "youtube");
+
+    replaceAll(result, "git hub", "github");
+    replaceAll(result, "get hub", "github");
+
+    replaceAll(result, "g mail", "gmail");
+    replaceAll(result, "g-mail", "gmail");
+
+    replaceAll(result, "what's app", "whatsapp");
+    replaceAll(result, "what s app", "whatsapp");
+    replaceAll(result, "what-app", "whatsapp");
+
+    replaceAll(result, "linked in", "linkedin");
+    replaceAll(result, "chat gpt", "chatgpt");
+
+    replaceAll(result, "stack overflow", "stackoverflow");
+
+    std::string cleaned;
+
+    bool previousSpace = false;
+
+    for (char c : result)
+    {
+        if (
+            std::isspace(
+                static_cast<unsigned char>(c)
+            )
+        )
+        {
+            if (!previousSpace)
+            {
+                cleaned += ' ';
+            }
+
+            previousSpace = true;
+        }
+        else
+        {
+            cleaned += c;
+            previousSpace = false;
+        }
+    }
+
+    return trim(cleaned);
+}
+
+bool CommandParser::startsWith(
+    const std::string& text,
+    const std::string& prefix
+) const
+{
+    return text.rfind(prefix, 0) == 0;
+}
+
+std::string CommandParser::removePrefix(
+    const std::string& text,
+    const std::string& prefix
+) const
+{
+    if (!startsWith(text, prefix))
+    {
+        return text;
+    }
+
+    return trim(
+        text.substr(prefix.length())
+    );
 }
 
 ParsedCommand CommandParser::parse(
-    const std::string& input) const
+    const std::string& input
+) const
 {
-    ParsedCommand command;
-
-    command.type = CommandType::UNKNOWN;
-    command.argument = "";
-    command.original = input;
-
-    const std::string text =
+    std::string command =
         normalize(input);
 
-    /*
-     * EXIT COMMANDS
-     */
-    if (text == "exit" ||
-        text == "quit" ||
-        text == "close assistant" ||
-        text == "exit assistant")
+    // ------------------------------------------------------------
+    // CONVERSATIONAL PREFIXES
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> prefixes =
     {
-        command.type = CommandType::EXIT;
-        return command;
+        "please ",
+        "can you ",
+        "could you ",
+        "would you ",
+        "will you ",
+        "i want you to ",
+        "i want to ",
+        "i would like you to ",
+        "i would like to ",
+        "would you please ",
+        "can you please ",
+        "could you please "
+    };
+
+    bool removedPrefix = true;
+
+    while (
+        removedPrefix &&
+        !command.empty()
+    )
+    {
+        removedPrefix = false;
+
+        for (const auto& prefix : prefixes)
+        {
+            if (startsWith(command, prefix))
+            {
+                command =
+                    removePrefix(
+                        command,
+                        prefix
+                    );
+
+                removedPrefix = true;
+                break;
+            }
+        }
     }
 
-    /*
-     * HELP COMMANDS
-     */
-    if (text == "help" ||
-        text == "show help" ||
-        text == "what can you do")
+    // ------------------------------------------------------------
+    // EXIT
+    // ------------------------------------------------------------
+
+    if (
+        command == "exit" ||
+        command == "quit" ||
+        command == "close assistant" ||
+        command == "exit assistant" ||
+        command == "quit assistant"
+    )
     {
-        command.type = CommandType::HELP;
-        return command;
+        return {
+            CommandType::EXIT,
+            {}
+        };
     }
 
-    /*
-     * SYSTEM INFORMATION
-     */
-    if (text == "system information" ||
-        text == "system info" ||
-        text == "show system information" ||
-        text == "show system info" ||
-        text == "please show system information")
+    // ------------------------------------------------------------
+    // HELP
+    // ------------------------------------------------------------
+
+    if (
+        command == "help" ||
+        command == "show help" ||
+        command == "help me" ||
+        contains(command, "what can you do")
+    )
     {
-        command.type = CommandType::SYSTEM_INFO;
-        return command;
+        return {
+            CommandType::HELP,
+            {}
+        };
     }
 
-    /*
-     * PROCESS COMMANDS
-     */
-    if (text == "show processes" ||
-        text == "list processes" ||
-        text == "show running processes" ||
-        text == "list running processes")
+    // ------------------------------------------------------------
+    // SYSTEM INFORMATION
+    // ------------------------------------------------------------
+
+    if (
+        command == "system information" ||
+        command == "system info" ||
+        command == "show system information" ||
+        command == "show system info" ||
+        command == "show system details" ||
+        command == "system details" ||
+        command == "system specifications" ||
+        command == "show system specifications" ||
+        contains(command, "tell me about my system") ||
+        contains(command, "show me my system")
+    )
     {
-        command.type = CommandType::SHOW_PROCESSES;
-        return command;
+        return {
+            CommandType::SYSTEM_INFO,
+            {}
+        };
     }
 
-    /*
-     * FILE LIST COMMANDS
-     */
-    if (text == "list files" ||
-        text == "show files" ||
-        text == "show my files")
+    // ------------------------------------------------------------
+    // PROCESSES
+    // ------------------------------------------------------------
+
+    if (
+        command == "show processes" ||
+        command == "show running processes" ||
+        command == "list processes" ||
+        command == "show all processes" ||
+        command == "show running programs" ||
+        command == "list running programs" ||
+        command == "what programs are running"
+    )
     {
-        command.type = CommandType::LIST_FILES;
-        return command;
+        return {
+            CommandType::SHOW_PROCESSES,
+            {}
+        };
     }
 
-    /*
-     * APPLICATION OPEN COMMANDS
-     */
-    const std::string application =
-        extractApplication(text);
+    // ------------------------------------------------------------
+    // FILE LISTING
+    // ------------------------------------------------------------
 
-    if (!application.empty())
+    if (
+        command == "list files" ||
+        command == "show files" ||
+        command == "show all files" ||
+        command == "list all files" ||
+        command == "display files" ||
+        command == "display all files" ||
+        command == "show me files" ||
+        command == "show me all files" ||
+        command == "list the files" ||
+        command == "show the files" ||
+        command == "show everything in this folder" ||
+        command == "show files in this folder"
+    )
     {
-        command.type =
-            CommandType::OPEN_APPLICATION;
-
-        command.argument = application;
-
-        return command;
+        return {
+            CommandType::LIST_FILES,
+            "."
+        };
     }
 
-    /*
-     * APPLICATION CLOSE COMMANDS
-     */
-    if (startsWith(text, "close "))
+    // ------------------------------------------------------------
+    // DISK
+    // ------------------------------------------------------------
+
+    if (
+        command == "disk information" ||
+        command == "disk info" ||
+        command == "show disk space" ||
+        command == "show disk information" ||
+        command == "show disk info" ||
+        command == "disk usage" ||
+        command == "show disk usage" ||
+        command == "how much disk space do i have"
+    )
     {
-        command.type =
-            CommandType::CLOSE_APPLICATION;
-
-        command.argument =
-            removeTrailingPunctuation(
-                removePrefix(text, "close "));
-
-        return command;
+        return {
+            CommandType::DISK_INFO,
+            {}
+        };
     }
 
-    if (startsWith(text, "please close "))
+    // ------------------------------------------------------------
+    // NETWORK
+    // ------------------------------------------------------------
+
+    if (
+        command == "network information" ||
+        command == "network info" ||
+        command == "show network information" ||
+        command == "show network info" ||
+        command == "show network" ||
+        command == "network status" ||
+        command == "show network status"
+    )
     {
-        command.type =
-            CommandType::CLOSE_APPLICATION;
-
-        command.argument =
-            removeTrailingPunctuation(
-                removePrefix(text, "please close "));
-
-        return command;
+        return {
+            CommandType::NETWORK_INFO,
+            {}
+        };
     }
 
-    /*
-     * CREATE FILE
-     */
-    if (startsWith(text, "create file "))
+    // ------------------------------------------------------------
+    // SEARCH
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> searchPrefixes =
     {
-        command.type =
-            CommandType::CREATE_FILE;
+        "search google for ",
+        "search google ",
+        "search for ",
+        "search "
+    };
 
-        command.argument =
-            removeTrailingPunctuation(
-                removePrefix(text, "create file "));
+    for (const auto& prefix : searchPrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            const std::string query =
+                removePrefix(
+                    command,
+                    prefix
+                );
 
-        return command;
+            if (!query.empty())
+            {
+                return {
+                    CommandType::SEARCH_WEB,
+                    query
+                };
+            }
+        }
     }
 
-    /*
-     * DELETE FILE
-     */
-    if (startsWith(text, "delete file "))
+    // ------------------------------------------------------------
+    // OPEN / LAUNCH / START
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> openPrefixes =
     {
-        command.type =
-            CommandType::DELETE_FILE;
+        "open ",
+        "launch ",
+        "start ",
+        "run "
+    };
 
-        command.argument =
-            removeTrailingPunctuation(
-                removePrefix(text, "delete file "));
+    for (const auto& prefix : openPrefixes)
+    {
+        if (!startsWith(command, prefix))
+        {
+            continue;
+        }
 
-        return command;
+        std::string target =
+            removePrefix(
+                command,
+                prefix
+            );
+
+        // Remove articles.
+        if (startsWith(target, "the "))
+        {
+            target =
+                removePrefix(
+                    target,
+                    "the "
+                );
+        }
+
+        // Common browser wording.
+        replaceAll(
+            target,
+            "youtube website",
+            "youtube"
+        );
+
+        replaceAll(
+            target,
+            "youtube browser",
+            "youtube"
+        );
+
+        replaceAll(
+            target,
+            "whatsapp website",
+            "whatsapp"
+        );
+
+        replaceAll(
+            target,
+            "github website",
+            "github"
+        );
+
+        replaceAll(
+            target,
+            "github browser",
+            "github"
+        );
+
+        // --------------------------------------------------------
+        // KNOWN WEBSITES
+        // --------------------------------------------------------
+
+        if (
+            target == "youtube" ||
+            target == "youtube com"
+        )
+        {
+            return {
+                CommandType::OPEN_URL,
+                "youtube"
+            };
+        }
+
+        if (
+            target == "whatsapp" ||
+            target == "whatsapp web" ||
+            target == "web whatsapp"
+        )
+        {
+            return {
+                CommandType::OPEN_URL,
+                "whatsapp"
+            };
+        }
+
+        if (target == "gmail")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "gmail"
+            };
+        }
+
+        if (target == "google")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "google"
+            };
+        }
+
+        if (target == "github")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "github"
+            };
+        }
+
+        if (target == "linkedin")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "linkedin"
+            };
+        }
+
+        if (target == "reddit")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "reddit"
+            };
+        }
+
+        if (target == "chatgpt")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "chatgpt"
+            };
+        }
+
+        if (target == "stackoverflow")
+        {
+            return {
+                CommandType::OPEN_URL,
+                "stackoverflow"
+            };
+        }
+
+        // --------------------------------------------------------
+        // DIRECT URL
+        // --------------------------------------------------------
+
+        if (
+            startsWith(target, "http://") ||
+            startsWith(target, "https://") ||
+            target.find('.') != std::string::npos
+        )
+        {
+            return {
+                CommandType::OPEN_URL,
+                target
+            };
+        }
+
+        // --------------------------------------------------------
+        // APPLICATION
+        // --------------------------------------------------------
+
+        return {
+            CommandType::OPEN_APPLICATION,
+            target
+        };
     }
 
-    return command;
+    // ------------------------------------------------------------
+    // CLOSE APPLICATION
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> closePrefixes =
+    {
+        "close ",
+        "stop ",
+        "terminate ",
+        "quit "
+    };
+
+    for (const auto& prefix : closePrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            std::string target =
+                removePrefix(
+                    command,
+                    prefix
+                );
+
+            if (startsWith(target, "the "))
+            {
+                target =
+                    removePrefix(
+                        target,
+                        "the "
+                    );
+            }
+
+            return {
+                CommandType::CLOSE_APPLICATION,
+                target
+            };
+        }
+    }
+
+    // ------------------------------------------------------------
+    // CREATE FILE
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> createFilePrefixes =
+    {
+        "create file ",
+        "make file ",
+        "new file "
+    };
+
+    for (const auto& prefix : createFilePrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            return {
+                CommandType::CREATE_FILE,
+                removePrefix(
+                    command,
+                    prefix
+                )
+            };
+        }
+    }
+
+    // ------------------------------------------------------------
+    // DELETE FILE
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> deleteFilePrefixes =
+    {
+        "delete file ",
+        "remove file "
+    };
+
+    for (const auto& prefix : deleteFilePrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            return {
+                CommandType::DELETE_FILE,
+                removePrefix(
+                    command,
+                    prefix
+                )
+            };
+        }
+    }
+
+    // ------------------------------------------------------------
+    // CREATE FOLDER
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> createFolderPrefixes =
+    {
+        "create folder ",
+        "make folder ",
+        "new folder ",
+        "create directory ",
+        "make directory "
+    };
+
+    for (const auto& prefix : createFolderPrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            return {
+                CommandType::CREATE_FOLDER,
+                removePrefix(
+                    command,
+                    prefix
+                )
+            };
+        }
+    }
+
+    // ------------------------------------------------------------
+    // DELETE FOLDER
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> deleteFolderPrefixes =
+    {
+        "delete folder ",
+        "remove folder ",
+        "delete directory ",
+        "remove directory "
+    };
+
+    for (const auto& prefix : deleteFolderPrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            return {
+                CommandType::DELETE_FOLDER,
+                removePrefix(
+                    command,
+                    prefix
+                )
+            };
+        }
+    }
+
+    // ------------------------------------------------------------
+    // UNKNOWN
+    // ------------------------------------------------------------
+
+    return {
+        CommandType::UNKNOWN,
+        input
+    };
 }
