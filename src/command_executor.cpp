@@ -201,6 +201,37 @@ void CommandExecutor::execute(
             break;
         }
 
+        case CommandType::CREATE_FILE:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "create file " + command.argument
+                );
+            }
+
+            FileManager manager;
+            manager.createFile(command.argument);
+
+            break;
+        }
+
+        case CommandType::DELETE_FILE:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "delete file " + command.argument
+                );
+            }
+
+            FileManager manager;
+            manager.deleteFile(command.argument);
+
+            break;
+        }
+
+
         case CommandType::DISK_INFO:
         {
             if (driver_.isOpen())

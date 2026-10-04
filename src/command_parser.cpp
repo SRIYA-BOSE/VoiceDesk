@@ -81,7 +81,6 @@ std::string CommandParser::normalize(
     for (char& c : result)
     {
         if (
-            c == '.' ||
             c == ',' ||
             c == '!' ||
             c == '?' ||
