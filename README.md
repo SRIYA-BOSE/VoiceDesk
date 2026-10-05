@@ -2,216 +2,146 @@
 
 ## Voice-Controlled Linux Desktop Assistant
 
-VoiceDesk is a **C++17 voice-controlled Linux desktop assistant** designed to demonstrate the integration of **speech recognition, Linux system programming, command safety, process management, file management, and a custom Linux character device driver**.
+VoiceDesk is a **C++17 voice-controlled Linux desktop assistant** designed to demonstrate the integration of local speech recognition, natural-language command processing, command safety, Linux desktop automation, system monitoring, file management, process management, browser automation, and Linux kernel programming.
 
-The system allows users to interact with selected Linux desktop operations using natural-language commands through either keyboard or voice input.
+The project provides a controlled interface for interacting with selected Linux desktop operations through **keyboard or voice input**.
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-- 🎙️ Local voice recognition using **whisper.cpp**
+- 🎙️ Local speech recognition using **whisper.cpp**
 - 🧠 Natural-language command parsing
-- 🛡️ Dangerous-command safety validation
+- 🛡️ SafetyEngine for dangerous-command detection
 - 🖥️ Controlled Linux application management
-- 📂 File management
-- ⚙️ Process management
-- 📊 System information monitoring
+- 🌐 Browser opening and web search
+- 🔎 Google search support
+- ▶️ YouTube search support
+- 🦊 Firefox WebDriver BiDi automation
+- 📂 File creation, listing, and deletion
+- ⚙️ Linux process management
+- 📊 CPU, memory, disk, network, uptime, load, and kernel information
 - 🔌 Custom Linux character device driver
 - 🔄 User-space ↔ kernel-space communication
-- 🔐 Application allowlisting
+- 🔐 Destructive-action confirmation
 - 🧩 Modular C++17 architecture
 - 🐧 Linux system programming
 - 🔧 Linux kernel module development
-- 📚 Complete technical documentation
-
----
-
-## 📌 Project Overview
-
-VoiceDesk provides a voice-driven interface for interacting with selected Linux desktop functions.
-
-A user can enter commands such as:
-
-```text
-Open Firefox
-Show system information
-Show processes
-List files
-Create file test.txt
-Delete file test.txt
-Close Firefox
-Help
-Exit
-```
-
-The system processes each command through a controlled pipeline:
-
-```text
-┌─────────────────────────────────────────────┐
-│              User Interaction               │
-│                                             │
-│       Keyboard Input / Voice Input          │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│             Voice Recognition               │
-│                                             │
-│                 whisper.cpp                 │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│               Safety Engine                 │
-│                                             │
-│       Dangerous Command Detection           │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│              Command Parser                 │
-│                                             │
-│    Natural Language → Structured Command    │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│             Command Executor                │
-│                                             │
-│ Application / File / Process / System Ops   │
-└───────────────┬─────────────────┬───────────┘
-                │                 │
-                │                 ▼
-                │        ┌────────────────────┐
-                │        │ Device Driver      │
-                │        │ Client             │
-                │        └─────────┬──────────┘
-                │                  │
-                │                  ▼
-                │        ┌────────────────────┐
-                │        │ /dev/voicedesk     │
-                │        └─────────┬──────────┘
-                │                  │
-                │                  ▼
-                │        ┌────────────────────┐
-                │        │ Linux Character    │
-                │        │ Device Driver      │
-                │        └─────────┬──────────┘
-                │                  │
-                │                  ▼
-                │             Kernel Space
-                │
-                ▼
-        Linux User-Space Operations
-```
+- 📚 Technical documentation
 
 ---
 
 # 🏗️ System Architecture
 
-VoiceDesk follows a layered architecture that separates voice recognition, safety validation, command interpretation, execution, and kernel communication.
+VoiceDesk follows a layered architecture separating voice recognition, safety validation, command interpretation, command execution, Linux operations, browser automation, and kernel communication.
 
 ```text
-                    ┌─────────────────────┐
-                    │        USER         │
-                    │                     │
-                    │ Keyboard / Voice    │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │    VoiceEngine      │
-                    │     whisper.cpp     │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │    SafetyEngine     │
-                    │ Command Validation  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │   CommandParser     │
-                    │ Intent Recognition  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │  CommandExecutor    │
-                    └──────────┬──────────┘
-                               │
-                  ┌────────────┴────────────┐
-                  │                         │
-                  ▼                         ▼
-        ┌──────────────────┐      ┌──────────────────┐
-        │ Linux User Space │      │ Device Driver    │
-        │ Operations       │      │ Client           │
-        └──────────────────┘      └────────┬─────────┘
-                                           │
-                                           ▼
-                                  ┌──────────────────┐
-                                  │ /dev/voicedesk   │
-                                  └────────┬─────────┘
-                                           │
-                                           ▼
-                                  ┌──────────────────┐
-                                  │ Linux Character  │
-                                  │ Device Driver    │
-                                  └────────┬─────────┘
-                                           │
-                                           ▼
-                                      Kernel Space
+                         ┌───────────────────────┐
+                         │         USER          │
+                         │                       │
+                         │  Keyboard / Voice     │
+                         └───────────┬───────────┘
+                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │      VoiceEngine      │
+                         │      whisper.cpp      │
+                         └───────────┬───────────┘
+                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │     SafetyEngine      │
+                         │  Security Validation  │
+                         └───────────┬───────────┘
+                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │     CommandParser     │
+                         │   Intent Recognition  │
+                         └───────────┬───────────┘
+                                     │
+                                     ▼
+                         ┌───────────────────────┐
+                         │    CommandExecutor    │
+                         └───────────┬───────────┘
+                                     │
+                  ┌──────────────────┼──────────────────┐
+                  │                  │                  │
+                  ▼                  ▼                  ▼
+          ┌──────────────┐   ┌──────────────┐   ┌───────────────┐
+          │ Linux User   │   │   Browser    │   │ Device Driver │
+          │ Space        │   │ Automation   │   │    Client     │
+          └──────────────┘   └──────┬───────┘   └───────┬───────┘
+                                    │                   │
+                                    ▼                   ▼
+                             Firefox WebDriver       /dev/voicedesk
+                                  BiDi                    │
+                                                         ▼
+                                               Linux Character Driver
+                                                         │
+                                                         ▼
+                                                   Kernel Space
 ```
 
 ---
 
 # 🔄 Command Processing Pipeline
 
-Every command passes through a controlled processing sequence:
+Every command follows a controlled processing pipeline.
 
 ```text
 User Input
     │
-    ▼
-Safety Validation
+    ├────────────── Keyboard
     │
-    ├────────────── Unsafe ──────────────► BLOCK
-    │
-    ▼
-Command Parser
-    │
-    ▼
-Structured Command
-    │
-    ▼
-Command Executor
-    │
-    ├──────────────► Linux User-Space Operation
-    │
-    ▼
-Device Driver Client
-    │
-    ▼
-/dev/voicedesk
-    │
-    ▼
-Linux Character Driver
-    │
-    ▼
-Kernel Space
+    └────────────── Voice
+                     │
+                     ▼
+              Speech Recognition
+                     │
+                     ▼
+              Recognized Text
+                     │
+                     ▼
+              SafetyEngine
+                     │
+            ┌────────┴────────┐
+            │                 │
+          Unsafe             Safe
+            │                 │
+            ▼                 ▼
+          BLOCK         CommandParser
+                              │
+                              ▼
+                       Parsed Command
+                              │
+                              ▼
+                       CommandExecutor
+                              │
+              ┌───────────────┼────────────────┐
+              │               │                │
+              ▼               ▼                ▼
+        Linux Operations   Browser         Driver Client
+                              │                │
+                              ▼                ▼
+                       Firefox BiDi       /dev/voicedesk
+                                               │
+                                               ▼
+                                          Kernel Driver
 ```
 
-This separation allows the system to keep **command validation, command interpretation, execution, and kernel communication** as distinct components.
+This separation ensures:
+
+- Safety validation happens before execution.
+- Parsing is independent from execution.
+- Browser operations remain separated from system operations.
+- Driver communication remains isolated from application logic.
 
 ---
 
 # 🎙️ Voice Recognition
 
 VoiceDesk uses **whisper.cpp** for local speech-to-text processing.
-
-The voice pipeline is:
 
 ```text
 Microphone
@@ -226,49 +156,63 @@ whisper.cpp
 Recognized Text
     │
     ▼
-Safety Engine
+SafetyEngine
     │
     ▼
-Command Parser
+CommandParser
     │
     ▼
-Command Executor
+CommandExecutor
 ```
 
-The project uses an English Whisper model.
+The current application uses an English Whisper model.
 
-The downloaded model is intentionally excluded from the Git repository because model files are large.
+The model is intentionally excluded from Git because Whisper model files are large.
+
+The current runtime configuration uses:
+
+```text
+third_party/whisper.cpp/models/ggml-small.en.bin
+```
 
 ---
 
 # 🧠 Natural-Language Command Parsing
 
-VoiceDesk does not require every command to follow exactly the same wording.
+VoiceDesk accepts different natural-language variations for supported intents.
 
-For example, the following inputs can represent the same application-opening intent:
+For example:
 
 ```text
 open firefox
 Open Firefox
 please open Firefox
-can you open Firefox
 launch Firefox
 start Firefox
 ```
 
-The command parser converts natural-language input into structured command types.
+These can resolve to the same application-opening intent.
 
 Supported command categories include:
 
 ```text
 UNKNOWN
 OPEN_APPLICATION
+OPEN_URL
+SEARCH_WEB
 CLOSE_APPLICATION
 SYSTEM_INFO
+SHOW_PROCESSES
 LIST_FILES
 CREATE_FILE
 DELETE_FILE
-SHOW_PROCESSES
+DISK_INFO
+NETWORK_INFO
+CPU_USAGE
+MEMORY_USAGE
+UPTIME
+LOAD_AVERAGE
+KERNEL_INFO
 HELP
 EXIT
 ```
@@ -277,9 +221,7 @@ EXIT
 
 # 🛡️ Safety Engine
 
-VoiceDesk performs safety validation before executing a command.
-
-The safety architecture is:
+VoiceDesk validates commands before they reach the execution layer.
 
 ```text
 Raw User Input
@@ -296,7 +238,7 @@ CommandParser
 CommandExecutor
 ```
 
-The safety layer detects known dangerous command patterns, including examples such as:
+Dangerous command patterns include examples such as:
 
 ```text
 rm -rf /
@@ -315,41 +257,165 @@ User:
 rm -rf /
 
 VoiceDesk:
-[Safety] Command blocked for security reasons.
+VoiceDesk Safety Engine:
+This command has been blocked for security reasons.
 ```
 
-The safety engine operates in user space before the command reaches the execution stage.
+The SafetyEngine is the primary application-level safety mechanism.
 
-The Linux character driver provides communication between user space and kernel space; it is not the application's primary safety authority.
+The Linux character device driver provides user-space ↔ kernel-space communication and is not the application's primary safety authority.
 
 ---
 
 # 🖥️ Application Management
 
-VoiceDesk uses a controlled application allowlist instead of unrestricted arbitrary application execution.
+VoiceDesk uses controlled application matching instead of unrestricted arbitrary application execution.
 
-Current supported examples include:
+Supported application examples include:
 
 ```text
 firefox
-xterm
-gedit
-nautilus
+vscode
+terminal
+vlc
+file manager
 ```
 
-Example:
+Examples:
 
 ```text
 open firefox
-```
+open vscode
+open terminal
 
-and:
-
-```text
 close firefox
 ```
 
-The executor validates the requested application before performing the operation.
+---
+
+# 🌐 Web & Browser Commands
+
+VoiceDesk supports predefined web destinations:
+
+```text
+open google
+open youtube
+open github
+open gmail
+open whatsapp
+open linkedin
+open reddit
+open chatgpt
+```
+
+Users can also open valid URLs:
+
+```text
+open https://example.com
+```
+
+Web searching:
+
+```text
+search google for Linux device drivers
+search for C++ tutorials
+```
+
+YouTube search variations:
+
+```text
+search youtube for Python tutorials
+search youtube Python tutorials
+youtube search Python tutorials
+find on youtube Python tutorials
+play on youtube Python tutorials
+```
+
+Normal visible browser opening continues to use the existing Linux desktop browser mechanism.
+
+---
+
+# 🦊 Firefox WebDriver BiDi
+
+VoiceDesk includes a dedicated Firefox WebDriver BiDi client.
+
+Source files:
+
+```text
+include/firefox_bidi_client.hpp
+src/firefox_bidi_client.cpp
+```
+
+The BiDi layer supports:
+
+- WebSocket connection
+- WebDriver BiDi session creation
+- Browsing-context discovery
+- JavaScript evaluation
+- Page navigation
+- Session termination
+- JSON-safe command construction
+
+The automation layer is separate from the normal visible browser-opening functionality.
+
+## Firefox BiDi Endpoint
+
+The current Firefox automation endpoint is:
+
+```text
+ws://127.0.0.1:9222
+```
+
+Start Firefox for BiDi automation:
+
+```bash
+firefox --headless --no-remote \
+  --remote-debugging-port 9222 \
+  --remote-allow-hosts localhost \
+  --remote-allow-origins http://localhost:9222 \
+  -remote-allow-system-access \
+  >/tmp/voicedesk-firefox.log 2>&1 &
+```
+
+Verify the port:
+
+```bash
+ss -ltnp | grep ':9222'
+```
+
+Check the log:
+
+```bash
+cat /tmp/voicedesk-firefox.log
+```
+
+The implemented BiDi functionality has been tested with:
+
+```text
+session.new
+browsingContext.getTree
+script.evaluate
+browsingContext.navigate
+session.end
+```
+
+Example architecture:
+
+```text
+VoiceDesk
+    │
+    ▼
+Firefox BiDi Client
+    │
+    ▼
+WebSocket
+    │
+    ▼
+Firefox
+    │
+    ▼
+Web Page
+```
 
 ---
 
@@ -357,25 +423,37 @@ The executor validates the requested application before performing the operation
 
 VoiceDesk supports controlled file operations.
 
-### List files
+## List Files
 
 ```text
 list files
 ```
 
-### Create a file
+## Create a File
 
 ```text
 create file test.txt
 ```
 
-### Delete a file
+## Delete a File
 
 ```text
 delete file test.txt
 ```
 
-The file-management component provides the application-level interface for these operations.
+Destructive file operations require confirmation.
+
+Example:
+
+```text
+VoiceDesk Confirmation Required
+---------------------------------
+Action: Delete file
+
+Target: test.txt
+
+Are you sure? (y/n):
+```
 
 ---
 
@@ -383,45 +461,90 @@ The file-management component provides the application-level interface for these
 
 VoiceDesk can display running Linux processes.
 
-Command:
-
 ```text
 show processes
 ```
 
-The process-management component interacts with Linux process information to present the current process state.
+The ProcessManager provides the process-management functionality.
 
 ---
 
 # 📊 System Monitoring
 
-VoiceDesk provides system information through Linux system interfaces.
+VoiceDesk provides Linux system information and monitoring.
 
-Command:
+## System Information
 
 ```text
 show system information
+show system info
+show system details
+show system specifications
+show system status
 ```
 
-The system-monitoring component can provide information about the Linux environment, kernel, CPU, memory, and other available system details.
+## CPU
+
+```text
+show cpu usage
+```
+
+## Memory
+
+```text
+show memory usage
+```
+
+## Disk
+
+```text
+show disk usage
+show disk space
+```
+
+## Network
+
+```text
+show network information
+```
+
+## Uptime
+
+```text
+show uptime
+```
+
+## Load Average
+
+```text
+show load average
+```
+
+## Kernel Information
+
+```text
+show kernel information
+```
 
 ---
 
 # 🔌 Linux Character Device Driver
 
-VoiceDesk includes a custom Linux character device driver located at:
+VoiceDesk includes a custom Linux character device driver.
+
+Driver:
 
 ```text
 driver/voicedesk_driver.c
 ```
 
-The driver provides the device interface:
+Device:
 
 ```text
 /dev/voicedesk
 ```
 
-The driver demonstrates practical Linux kernel programming concepts including:
+The driver demonstrates:
 
 - Linux kernel modules
 - Character devices
@@ -441,38 +564,36 @@ The driver demonstrates practical Linux kernel programming concepts including:
 
 # 🔄 User-Space ↔ Kernel-Space Communication
 
-VoiceDesk demonstrates communication between the C++ user-space application and the Linux kernel driver.
-
-```text
-┌──────────────────────────────┐
-│       VoiceDesk C++          │
-│          User Space          │
-└──────────────┬───────────────┘
-               │
-               │ open()
-               │ write()
-               │ read()
-               │ close()
-               ▼
-┌──────────────────────────────┐
-│       /dev/voicedesk         │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│   Linux Character Driver     │
-│         Kernel Space         │
-└──────────────────────────────┘
-```
-
-The application contains a dedicated driver client:
+VoiceDesk contains a dedicated driver client:
 
 ```text
 include/device_driver_client.hpp
 src/device_driver_client.cpp
 ```
 
-The client uses standard Linux file operations to communicate with the device.
+Communication path:
+
+```text
+┌───────────────────────────────┐
+│       VoiceDesk C++           │
+│          User Space           │
+└───────────────┬───────────────┘
+                │
+                │ open()
+                │ write()
+                │ read()
+                │ close()
+                ▼
+┌───────────────────────────────┐
+│        /dev/voicedesk         │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│     Linux Character Driver    │
+│          Kernel Space         │
+└───────────────────────────────┘
+```
 
 Conceptually:
 
@@ -486,9 +607,7 @@ driver_.sendCommand("open firefox");
 
 # 🔐 Driver Synchronization
 
-The character driver maintains an internal command buffer protected using a Linux kernel mutex.
-
-Conceptually:
+The character driver protects shared command-buffer state using a Linux kernel mutex.
 
 ```text
 Process A ──┐
@@ -496,7 +615,7 @@ Process B ──┼──► Mutex ──► Driver Buffer
 Process C ──┘
 ```
 
-The mutex protects shared driver state from concurrent access.
+This protects shared driver state from concurrent access.
 
 ---
 
@@ -504,23 +623,35 @@ The mutex protects shared driver state from concurrent access.
 
 ## VoiceEngine
 
-Handles voice input and speech recognition using whisper.cpp.
+Handles microphone input and speech recognition using whisper.cpp.
 
 ## SafetyEngine
 
-Validates commands before they reach the execution layer.
+Validates commands before execution.
 
 ## CommandParser
 
-Converts natural-language commands into structured command types.
+Converts natural-language input into structured command types.
 
 ## CommandExecutor
 
 Coordinates command execution and driver communication.
 
+## ApplicationManager
+
+Handles controlled application launching and closing.
+
+## BrowserManager
+
+Handles normal desktop browser opening and web searching.
+
+## FirefoxBidiClient
+
+Provides Firefox WebDriver BiDi browser automation.
+
 ## FileManager
 
-Handles supported file-management operations.
+Handles supported file operations.
 
 ## ProcessManager
 
@@ -528,7 +659,7 @@ Provides process-related operations.
 
 ## SystemMonitor
 
-Provides Linux system information.
+Provides Linux system information and monitoring.
 
 ## DeviceDriverClient
 
@@ -565,20 +696,26 @@ VoiceDesk/
 │   └── voicedesk_driver.c
 │
 ├── include/
+│   ├── application_manager.hpp
+│   ├── browser_manager.hpp
 │   ├── command_executor.hpp
 │   ├── command_parser.hpp
 │   ├── device_driver_client.hpp
 │   ├── file_manager.hpp
+│   ├── firefox_bidi_client.hpp
 │   ├── process_manager.hpp
 │   ├── safety_engine.hpp
 │   ├── system_monitor.hpp
 │   └── voice_engine.hpp
 │
 ├── src/
+│   ├── application_manager.cpp
+│   ├── browser_manager.cpp
 │   ├── command_executor.cpp
 │   ├── command_parser.cpp
 │   ├── device_driver_client.cpp
 │   ├── file_manager.cpp
+│   ├── firefox_bidi_client.cpp
 │   ├── main.cpp
 │   ├── process_manager.cpp
 │   ├── safety_engine.cpp
@@ -593,21 +730,22 @@ VoiceDesk/
 
 ---
 
-# 🛠️ Technologies Used
+# 🛠️ Technology Stack
 
 | Technology | Purpose |
 |---|---|
-| C++17 | Main application |
-| Linux | Target operating system |
-| Linux Kernel | Character device driver |
-| whisper.cpp | Local speech recognition |
-| GCC / G++ | C++ compilation |
-| GNU Make | Build system |
-| CMake | whisper.cpp build |
-| Git | Version control |
-| GitHub | Source-code hosting |
-| PulseAudio | Linux audio capture |
-| WSL2 | Development environment |
+| **C++17** | Main application |
+| **Linux** | Target operating system |
+| **Linux Kernel** | Character device driver |
+| **whisper.cpp** | Local speech recognition |
+| **Firefox WebDriver BiDi** | Browser automation |
+| **GCC / G++** | C++ compilation |
+| **GNU Make** | Main build system |
+| **CMake** | whisper.cpp build system |
+| **Git** | Version control |
+| **GitHub** | Source-code hosting |
+| **WSL2** | Development environment |
+| **Linux audio stack** | Voice capture |
 
 ---
 
@@ -622,9 +760,10 @@ VoiceDesk requires a Linux environment with:
 - Linux development tools
 - Compatible Linux kernel development/source environment for the driver
 - whisper.cpp dependencies
-- Audio support for voice functionality
+- Working audio input for voice functionality
+- Firefox for browser automation
 
-Verify the main development tools:
+Verify the main tools:
 
 ```bash
 uname -a
@@ -653,7 +792,7 @@ git submodule update --init --recursive
 
 ---
 
-## 2. Build whisper.cpp
+# 2. Build whisper.cpp
 
 Enter the whisper.cpp directory:
 
@@ -664,7 +803,7 @@ cd third_party/whisper.cpp
 Configure:
 
 ```bash
-cmake -B build -DWHISPER_SDL2=ON
+cmake -B build
 ```
 
 Build:
@@ -681,19 +820,19 @@ cd ../..
 
 ---
 
-## 3. Add the Whisper Model
+# 3. Add the Whisper Model
 
 Place the required English Whisper model at:
 
 ```text
-third_party/whisper.cpp/models/ggml-base.en.bin
+third_party/whisper.cpp/models/ggml-small.en.bin
 ```
 
-The model is excluded from Git through `.gitignore`.
+The model is intentionally excluded from Git because of its size.
 
 ---
 
-## 4. Build VoiceDesk
+# 4. Build VoiceDesk
 
 From the project root:
 
@@ -707,21 +846,20 @@ The executable will be generated at:
 build/voicedesk
 ```
 
+For a clean rebuild:
+
+```bash
+make clean && make
+```
+
 ---
 
 # 🔧 Linux Character Driver Setup
 
 ## 1. Build the Driver
 
-Enter the driver directory:
-
 ```bash
 cd driver
-```
-
-Build:
-
-```bash
 make
 ```
 
@@ -739,21 +877,19 @@ cd ..
 
 > The driver must be built against a compatible Linux kernel development/source environment.
 
----
-
 ## 2. Load the Driver
 
 ```bash
 sudo insmod driver/voicedesk_driver.ko
 ```
 
-Verify the module:
+Verify:
 
 ```bash
 lsmod | grep voicedesk
 ```
 
-Verify the device:
+Check the device:
 
 ```bash
 ls -l /dev/voicedesk
@@ -765,8 +901,6 @@ Check kernel messages:
 dmesg | grep voicedesk
 ```
 
----
-
 ## 3. Device Permissions
 
 A udev rule can be configured as:
@@ -775,7 +909,7 @@ A udev rule can be configured as:
 KERNEL=="voicedesk", MODE="0660", GROUP="users"
 ```
 
-Reload udev rules:
+Reload the rules:
 
 ```bash
 sudo udevadm control --reload-rules
@@ -790,6 +924,39 @@ ls -l /dev/voicedesk
 
 ---
 
+# 🦊 Firefox WebDriver BiDi Setup
+
+Start Firefox with BiDi support:
+
+```bash
+firefox --headless --no-remote \
+  --remote-debugging-port 9222 \
+  --remote-allow-hosts localhost \
+  --remote-allow-origins http://localhost:9222 \
+  -remote-allow-system-access \
+  >/tmp/voicedesk-firefox.log 2>&1 &
+```
+
+Verify:
+
+```bash
+ss -ltnp | grep ':9222'
+```
+
+Check the Firefox log:
+
+```bash
+cat /tmp/voicedesk-firefox.log
+```
+
+The BiDi endpoint should be available through:
+
+```text
+ws://127.0.0.1:9222
+```
+
+---
+
 # ▶️ Running VoiceDesk
 
 Start the application:
@@ -798,37 +965,147 @@ Start the application:
 ./build/voicedesk
 ```
 
-Example keyboard interaction:
+VoiceDesk presents two input modes:
 
 ```text
-VoiceDesk> open firefox
+Select command input mode:
+  1. Type a command
+  2. Speak a command
 ```
 
-For voice interaction:
+---
+
+# ⌨️ Keyboard Mode
+
+Select:
 
 ```text
-VoiceDesk> voice
+1
 ```
 
-Then speak a supported command.
+Then enter a command.
+
+Examples:
+
+```text
+open firefox
+open youtube
+search google artificial intelligence
+show system information
+show cpu usage
+show memory usage
+list files
+create file test.txt
+show processes
+```
+
+---
+
+# 🎙️ Voice Mode
+
+Start:
+
+```bash
+./build/voicedesk
+```
+
+Select:
+
+```text
+2
+```
+
+VoiceDesk initializes whisper.cpp and waits for speech.
+
+Example:
+
+```text
+Open Firefox
+```
+
+The recognized speech follows the same processing path as typed commands:
+
+```text
+Voice
+  ↓
+whisper.cpp
+  ↓
+Recognized Text
+  ↓
+SafetyEngine
+  ↓
+CommandParser
+  ↓
+CommandExecutor
+```
 
 ---
 
 # 🧪 Testing
 
+## Application
+
+```text
+open firefox
+```
+
+## Browser
+
+```text
+open google
+open youtube
+```
+
+## Google Search
+
+```text
+search google artificial intelligence
+```
+
+## YouTube Search
+
+```text
+search youtube python tutorial
+```
+
 ## System Information
 
 ```text
 show system information
+show system status
 ```
 
-## Running Processes
+## CPU
+
+```text
+show cpu usage
+```
+
+## Memory
+
+```text
+show memory usage
+```
+
+## Disk
+
+```text
+show disk usage
+```
+
+## Network
+
+```text
+show network information
+```
+
+## Processes
 
 ```text
 show processes
 ```
 
-## List Files
+## Files
 
 ```text
 list files
@@ -858,18 +1135,6 @@ Verify:
 ls -l test.txt
 ```
 
-## Open Application
-
-```text
-open firefox
-```
-
-## Close Application
-
-```text
-close firefox
-```
-
 ## Help
 
 ```text
@@ -884,9 +1149,7 @@ exit
 
 ---
 
-# 🛡️ Safety Test
-
-A key project demonstration is the safety layer.
+# 🛡️ Safety Demonstration
 
 Enter:
 
@@ -897,12 +1160,11 @@ rm -rf /
 Expected:
 
 ```text
-[Safety] Command blocked for security reasons.
+VoiceDesk Safety Engine:
+This command has been blocked for security reasons.
 ```
 
-The dangerous command should not be executed.
-
-This demonstrates the safety path:
+The dangerous command must not reach the execution stage.
 
 ```text
 User Input
@@ -916,7 +1178,7 @@ BLOCK
 
 # 🔍 Driver Verification
 
-Check whether the driver is loaded:
+Check whether the module is loaded:
 
 ```bash
 lsmod | grep voicedesk
@@ -928,13 +1190,13 @@ Check the device:
 ls -l /dev/voicedesk
 ```
 
-Check kernel logs:
+Check kernel messages:
 
 ```bash
 dmesg | grep voicedesk
 ```
 
-Typical driver messages include:
+Typical driver messages may include:
 
 ```text
 voicedesk: driver loaded
@@ -943,47 +1205,82 @@ voicedesk: received command: open firefox
 voicedesk: device closed
 ```
 
-These messages demonstrate the communication path between the VoiceDesk application and the Linux character driver.
+These messages demonstrate communication between the VoiceDesk application and the Linux character driver.
 
 ---
 
 # 🎬 Evaluation Demonstration
 
-A short evaluation can demonstrate the complete system.
+A complete demonstration can follow this sequence.
 
-### Step 1 — Verify the Driver
+## Step 1 — Verify the Driver
 
 ```bash
 lsmod | grep voicedesk
 ```
 
-### Step 2 — Verify the Device
+## Step 2 — Verify the Device
 
 ```bash
 ls -l /dev/voicedesk
 ```
 
-### Step 3 — Start VoiceDesk
+## Step 3 — Start Firefox BiDi
+
+```bash
+firefox --headless --no-remote \
+  --remote-debugging-port 9222 \
+  --remote-allow-hosts localhost \
+  --remote-allow-origins http://localhost:9222 \
+  -remote-allow-system-access \
+  >/tmp/voicedesk-firefox.log 2>&1 &
+```
+
+Verify:
+
+```bash
+ss -ltnp | grep ':9222'
+```
+
+## Step 4 — Start VoiceDesk
 
 ```bash
 ./build/voicedesk
 ```
 
-### Step 4 — Execute a Command
+## Step 5 — Execute an Application Command
 
 ```text
 open firefox
 ```
 
-### Step 5 — Verify Kernel Communication
+## Step 6 — Demonstrate Web Search
 
-In another Linux terminal:
-
-```bash
-dmesg | tail -20
+```text
+search google artificial intelligence
 ```
 
-### Step 6 — Demonstrate Safety
+## Step 7 — Demonstrate YouTube Search
+
+```text
+search youtube python tutorial
+```
+
+## Step 8 — Demonstrate System Monitoring
+
+```text
+show system status
+```
+
+## Step 9 — Demonstrate File Management
+
+```text
+create file demonstration.txt
+list files
+delete file demonstration.txt
+```
+
+## Step 10 — Demonstrate Safety
 
 ```text
 rm -rf /
@@ -992,16 +1289,18 @@ rm -rf /
 Expected:
 
 ```text
-[Safety] Command blocked for security reasons.
+Command blocked for security reasons.
 ```
 
-### Step 7 — Demonstrate Voice
+## Step 11 — Demonstrate Voice
+
+Select:
 
 ```text
-voice
+2
 ```
 
-Speak:
+Then speak:
 
 ```text
 Open Firefox
@@ -1012,21 +1311,17 @@ Complete pipeline:
 ```text
 Voice
   ↓
-Speech Recognition
+whisper.cpp
   ↓
-Safety Engine
+Recognized Text
   ↓
-Command Parser
+SafetyEngine
   ↓
-Command Executor
+CommandParser
   ↓
-Device Driver Client
+CommandExecutor
   ↓
-/dev/voicedesk
-  ↓
-Linux Character Driver
-  ↓
-Kernel
+Linux / Browser / Driver
 ```
 
 ---
@@ -1040,11 +1335,13 @@ The C++ application handles:
 - Voice recognition
 - Command parsing
 - Safety validation
-- Application execution
+- Application management
+- Browser operations
 - File operations
 - Process management
 - System monitoring
 - Driver communication
+- Firefox WebDriver BiDi automation
 
 ## Kernel Space
 
@@ -1067,11 +1364,11 @@ VoiceDesk demonstrates:
 
 ### Modular Architecture
 
-Each major responsibility is implemented as a separate component.
+Each major responsibility is implemented as an independent component.
 
 ### Separation of Concerns
 
-Voice recognition, safety, parsing, execution, system monitoring, file management, and driver communication are separated.
+Voice recognition, safety, parsing, execution, browser automation, system monitoring, file management, and driver communication are separated.
 
 ### Encapsulation
 
@@ -1079,7 +1376,7 @@ C++ classes expose focused interfaces for individual subsystems.
 
 ### Defensive Programming
 
-User input is validated before execution.
+Commands are validated before execution.
 
 ### Layered Architecture
 
@@ -1094,20 +1391,20 @@ Parsing
   ↓
 Execution
   ↓
-Driver Communication
+Linux / Browser / Driver
   ↓
 Kernel
 ```
 
 ### User-Space / Kernel-Space Separation
 
-The application performs desktop operations in user space while the character driver demonstrates kernel-space communication.
+Desktop operations remain in user space while the character driver demonstrates controlled kernel communication.
 
 ---
 
 # 🔬 Linux Character Driver Concepts
 
-The driver demonstrates APIs and concepts including:
+The driver demonstrates concepts including:
 
 ```text
 module_init()
@@ -1147,7 +1444,7 @@ VoiceDesk uses:
 /dev/voicedesk
 ```
 
-The C++ application can therefore communicate with the driver using standard Linux file operations:
+The C++ application communicates with the driver through standard Linux operations:
 
 ```text
 open()
@@ -1156,13 +1453,13 @@ write()
 close()
 ```
 
-This provides a clear and demonstrable user-space ↔ kernel-space boundary.
+This creates a clear user-space ↔ kernel-space boundary suitable for demonstrating Linux systems programming concepts.
 
 ---
 
 # 🔐 Public Repository Security
 
-This repository is intended to remain publicly accessible.
+VoiceDesk is intended to remain publicly accessible.
 
 **Never commit sensitive information**, including:
 
@@ -1178,48 +1475,62 @@ Private certificates
 Personal credentials
 ```
 
-Build artifacts and downloaded Whisper models are excluded through `.gitignore`.
+Build artifacts and downloaded Whisper models should remain excluded through `.gitignore`.
 
-Before pushing changes, review the staged content:
+Before pushing changes:
 
 ```bash
 git status
 git diff --cached
 ```
 
-If a secret is accidentally added, remove it from the repository history and rotate the exposed credential immediately.
+If a secret is accidentally committed:
+
+1. Remove it from repository history.
+2. Rotate the exposed credential.
+3. Verify that the replacement credential is not stored in the repository.
 
 ---
 
 # ⚠️ Current Limitations
 
-- Application control uses a predefined allowlist.
-- Speech recognition requires whisper.cpp and a local model.
+- Application execution is controlled through predefined application matching.
+- Speech recognition requires whisper.cpp and a local Whisper model.
 - Voice capture depends on the Linux audio environment.
-- The character driver is primarily a kernel communication and educational component rather than a physical hardware driver.
+- Speech recognition quality depends on the selected model and microphone/audio conditions.
+- Firefox BiDi requires Firefox to be running with the appropriate remote debugging configuration.
+- The character driver is primarily a Linux kernel communication and educational component rather than a physical hardware driver.
 - Driver compilation requires a compatible Linux kernel development/source environment.
-- A Linux kernel ABI change may require rebuilding the driver.
-- Speech recognition quality depends on the selected Whisper model and audio conditions.
+- Kernel ABI changes may require rebuilding the driver.
+- Some desktop applications may behave differently under WSL2/WSLg than on a native Linux desktop.
+- The current system is intentionally command-driven rather than GUI-driven.
 
 ---
 
 # 🔮 Future Improvements
 
-Potential improvements include:
+Potential future improvements include:
 
-- Direct PulseAudio/ALSA C++ audio capture
 - Wake-word detection
 - Multilingual speech recognition
-- Additional desktop applications
-- Graphical user interface
+- Improved intent classification
+- More desktop applications
+- Advanced Firefox automation
+- Browser tab management
+- Page interaction through WebDriver BiDi
 - Desktop notifications
+- Persistent command history
+- Improved microphone/audio handling
+- Hardware microphone integration
 - Driver event notifications
 - `poll()` / `select()` support
 - IOCTL-based driver commands
-- Persistent command history
-- Hardware microphone integration
-- Advanced intent classification
 - More Linux system-management capabilities
+- Additional safety policies
+- Automated command-parser testing
+- Unit testing
+- Integration testing
+- End-to-end voice testing
 
 ---
 
@@ -1232,23 +1543,35 @@ VoiceDesk currently provides:
 - ✅ Natural-language command parsing
 - ✅ Safety validation
 - ✅ Controlled application management
+- ✅ Browser opening
+- ✅ Google search
+- ✅ YouTube search
+- ✅ Firefox WebDriver BiDi client
+- ✅ Firefox navigation
+- ✅ JavaScript evaluation through BiDi
 - ✅ File management
+- ✅ Destructive-action confirmation
 - ✅ Process management
 - ✅ System monitoring
+- ✅ CPU monitoring
+- ✅ Memory monitoring
+- ✅ Disk monitoring
+- ✅ Network information
+- ✅ Uptime information
+- ✅ Load average
+- ✅ Kernel information
 - ✅ Custom Linux character device driver
 - ✅ `/dev/voicedesk` device interface
 - ✅ User-space ↔ kernel-space communication
 - ✅ Kernel synchronization using mutex
-- ✅ Modular software architecture
-- ✅ GitHub documentation
-- ✅ Driver documentation
-- ✅ Installation documentation
+- ✅ Modular C++ architecture
+- ✅ Git-based development workflow
 
 ---
 
 # 📚 Documentation
 
-Additional project documentation is available in:
+Additional documentation:
 
 ```text
 docs/
@@ -1281,24 +1604,38 @@ VoiceDesk demonstrates the integration of:
 
 ```text
 C++17
-      +
+   +
 Linux System Programming
-      +
-Speech Recognition
-      +
+   +
+Local Speech Recognition
+   +
 Natural-Language Command Processing
-      +
+   +
 Command Safety
-      +
+   +
+Linux Desktop Automation
+   +
+Firefox WebDriver BiDi
+   +
 Linux Character Device Driver
-      +
+   +
 User-Space / Kernel-Space Communication
 ```
 
-The project is designed as an academic Linux systems project demonstrating how a modern voice interface can be combined with **C++ software architecture and Linux kernel programming concepts**.
+The project demonstrates how a modern voice interface can be combined with:
+
+- C++ software architecture
+- Linux system programming
+- Local AI-powered speech recognition
+- Browser automation
+- Defensive command execution
+- Linux kernel programming
+
+VoiceDesk is designed as an academic, systems-programming, and demonstration project showing the interaction between a modern C++ application and Linux operating-system facilities.
 
 ---
 
-## 📄 License
+# 📄 License
 
-This project is intended for academic, educational, and demonstration purposes.
+This project is intended for academic, educational, research, and demonstration purposes.
+```
