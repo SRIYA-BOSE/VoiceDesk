@@ -1,6 +1,7 @@
 CXX = g++
 
 CXXFLAGS = -std=c++17 -Wall -Wextra \
+        -MMD -MP \
 	-Iinclude \
 	-Ithird_party/whisper.cpp/include \
 	-Ithird_party/whisper.cpp/ggml/include
@@ -12,6 +13,7 @@ LDFLAGS = \
 	-Wl,-rpath,$(WHISPER_DIR)
 
 LDLIBS = \
+        -lcrypto \
 	-lwhisper \
 	-lggml \
 	-lggml-base \
@@ -30,7 +32,8 @@ SOURCES = \
 	src/system_monitor.cpp \
 	src/safety_engine.cpp \
 	src/voice_engine.cpp \
-	src/device_driver_client.cpp
+        src/device_driver_client.cpp \
+        src/firefox_bidi_client.cpp
 
 OBJECTS = $(SOURCES:src/%.cpp=build/%.o)
 
@@ -47,10 +50,12 @@ build/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf build/*.o $(TARGET)
+	rm -rf build/*.o build/*.d $(TARGET)
 
 run: $(TARGET)
 	./$(TARGET)
+
+-include $(OBJECTS:.o=.d)
 
 .PHONY: all clean run
 
@@ -72,7 +77,8 @@ GUI_SOURCES = \
 	src/system_monitor.cpp \
 	src/safety_engine.cpp \
 	src/voice_engine.cpp \
-	src/device_driver_client.cpp
+        src/device_driver_client.cpp \
+        src/firefox_bidi_client.cpp
 
 GUI_OBJECTS = $(GUI_SOURCES:src/%.cpp=build/gui_%.o)
 
@@ -91,5 +97,7 @@ build/gui_%.o: src/%.cpp
 		-c $< -o $@
 
 gui: $(GUI_TARGET)
+
+-include $(OBJECTS:.o=.d)
 
 .PHONY: gui

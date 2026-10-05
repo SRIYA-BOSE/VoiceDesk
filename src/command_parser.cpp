@@ -92,6 +92,12 @@ std::string CommandParser::normalize(
         }
     }
 
+    // Remove sentence-ending periods while preserving periods inside filenames and URLs.
+    while (!result.empty() && result.back() == '.')
+    {
+        result.pop_back();
+    }
+
     // Common Whisper recognition variations.
     replaceAll(result, "you tube", "youtube");
     replaceAll(result, "you-tube", "youtube");
@@ -369,6 +375,137 @@ ParsedCommand CommandParser::parse(
     }
 
     // ------------------------------------------------------------
+
+    // ------------------------------------------------------------
+    // CPU USAGE
+    // ------------------------------------------------------------
+
+    if (
+        command == "cpu usage" ||
+        command == "show cpu usage" ||
+        command == "cpu information" ||
+        command == "cpu info" ||
+        command == "show cpu information" ||
+        command == "what is my cpu usage" ||
+        command == "how much cpu am i using"
+    )
+    {
+        return {
+            CommandType::CPU_USAGE,
+            {}
+        };
+    }
+
+    // ------------------------------------------------------------
+    // MEMORY USAGE
+    // ------------------------------------------------------------
+
+    if (
+        command == "memory usage" ||
+        command == "show memory usage" ||
+        command == "memory information" ||
+        command == "memory info" ||
+        command == "ram usage" ||
+        command == "show ram usage" ||
+        command == "show memory information" ||
+        command == "how much ram do i have" ||
+        command == "how much ram am i using"
+    )
+    {
+        return {
+            CommandType::MEMORY_USAGE,
+            {}
+        };
+    }
+
+    // ------------------------------------------------------------
+    // UPTIME
+    // ------------------------------------------------------------
+
+    if (
+        command == "uptime" ||
+        command == "show uptime" ||
+        command == "system uptime" ||
+        command == "show system uptime" ||
+        command == "how long has the system been running"
+    )
+    {
+        return {
+            CommandType::UPTIME,
+            {}
+        };
+    }
+
+    // ------------------------------------------------------------
+    // LOAD AVERAGE
+    // ------------------------------------------------------------
+
+    if (
+        command == "load average" ||
+        command == "show load average" ||
+        command == "system load" ||
+        command == "show system load"
+    )
+    {
+        return {
+            CommandType::LOAD_AVERAGE,
+            {}
+        };
+    }
+
+    // ------------------------------------------------------------
+    // KERNEL INFORMATION
+    // ------------------------------------------------------------
+
+    if (
+        command == "kernel information" ||
+        command == "kernel info" ||
+        command == "show kernel information" ||
+        command == "show kernel info" ||
+        command == "kernel version" ||
+        command == "show kernel version"
+    )
+    {
+        return {
+            CommandType::KERNEL_INFO,
+            {}
+        };
+    }
+
+    // ------------------------------------------------------------
+    // YOUTUBE SEARCH
+    // ------------------------------------------------------------
+
+    const std::vector<std::string> youtubeSearchPrefixes =
+    {
+        "search youtube for ",
+        "search youtube ",
+        "youtube search ",
+        "find on youtube ",
+        "find on youtube for ",
+        "play on youtube "
+    };
+
+    for (const auto& prefix : youtubeSearchPrefixes)
+    {
+        if (startsWith(command, prefix))
+        {
+            const std::string query =
+                removePrefix(
+                    command,
+                    prefix
+                );
+
+            if (!query.empty())
+            {
+                return {
+                    CommandType::OPEN_URL,
+                    "youtube search:" + query
+                };
+            }
+        }
+    }
+
     // SEARCH
     // ------------------------------------------------------------
 

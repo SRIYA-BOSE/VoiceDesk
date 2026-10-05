@@ -4,6 +4,7 @@
 #include "process_manager.hpp"
 #include "system_monitor.hpp"
 
+#include <cstdlib>
 #include <iostream>
 
 CommandExecutor::CommandExecutor()
@@ -265,6 +266,82 @@ void CommandExecutor::execute(
 
             break;
         }
+
+        case CommandType::CPU_USAGE:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "cpu usage"
+                );
+            }
+
+            SystemMonitor monitor;
+            monitor.displayCPUUsage();
+
+            break;
+        }
+
+        case CommandType::MEMORY_USAGE:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "memory usage"
+                );
+            }
+
+            SystemMonitor monitor;
+            monitor.displayMemoryUsage();
+
+            break;
+        }
+
+        case CommandType::UPTIME:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "uptime"
+                );
+            }
+
+            SystemMonitor monitor;
+            monitor.displayUptime();
+
+            break;
+        }
+
+        case CommandType::LOAD_AVERAGE:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "load average"
+                );
+            }
+
+            SystemMonitor monitor;
+            monitor.displayLoadAverage();
+
+            break;
+        }
+
+        case CommandType::KERNEL_INFO:
+        {
+            if (driver_.isOpen())
+            {
+                driver_.sendCommand(
+                    "kernel information"
+                );
+            }
+
+            SystemMonitor monitor;
+            monitor.displayKernelInformation();
+
+            break;
+        }
+
 
         case CommandType::HELP:
         {

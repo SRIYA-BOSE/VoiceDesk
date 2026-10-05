@@ -24,6 +24,12 @@ enum class CommandType
     DISK_INFO,
     NETWORK_INFO,
 
+    CPU_USAGE,
+    MEMORY_USAGE,
+    UPTIME,
+    LOAD_AVERAGE,
+    KERNEL_INFO,
+
     HELP,
     EXIT
 };

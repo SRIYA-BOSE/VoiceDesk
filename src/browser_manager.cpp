@@ -1,7 +1,7 @@
 #include "browser_manager.hpp"
+#include <cstdlib>
 
 #include <cctype>
-#include <cstdlib>
 #include <iostream>
 #include <sstream>
 
@@ -98,7 +98,7 @@ bool BrowserManager::openURL(
     std::cout
         << "[BrowserManager] Opening: "
         << url
-        << '\n';
+        << "\n";
 
     const std::string command =
         "xdg-open \"" +
@@ -112,6 +112,14 @@ bool BrowserManager::open(
     const std::string& target
 )
 {
+    if (target.rfind("youtube search:", 0) == 0)
+    {
+        const std::string query =
+            target.substr(15);
+
+        return searchYouTube(query);
+    }
+
     if (
         target.rfind("http://", 0) == 0 ||
         target.rfind("https://", 0) == 0
@@ -192,6 +200,25 @@ bool BrowserManager::searchGoogle(
 
     const std::string url =
         "https://www.google.com/search?q=" +
+        encoded;
+
+    return openURL(url);
+}
+
+bool BrowserManager::searchYouTube(
+    const std::string& query
+) const
+{
+    if (query.empty())
+    {
+        return false;
+    }
+
+    const std::string encoded =
+        urlEncode(query);
+
+    const std::string url =
+        "https://www.youtube.com/results?search_query=" +
         encoded;
 
     return openURL(url);
