@@ -273,6 +273,7 @@ ParsedCommand CommandParser::parse(
         command == "system information" ||
         command == "system info" ||
         command == "show system information" ||
+        command == "show system status" ||
         command == "show system info" ||
         command == "show system details" ||
         command == "system details" ||
